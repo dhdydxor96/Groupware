@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.management.menu.dao.DocManageMenualDao">
+	<resultMap type="RuleVO" id="ruleMap" autoMapping="true">
+		<id property="rulNo" column="RUL_NO"/>
+		<collection property="attatchList" ofType="AttatchVO" autoMapping="true">
+			<id property="attNo" column="ATT_NO" />
+		</collection>
+	</resultMap>
+	
+	<!-- 문의사항게시글 목록 조회 : 페이징 + 검색(제목-title, 작성자-writer, 내용-content, 전체 -->
+	<sql id="searchFrag">
+		<trim prefix="AND">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(RUL_TIT, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'content' eq simpleCondition.searchType">
+						INSTR(RUL_CON, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(RUL_TIT, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(RUL_CON, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+			
+		</trim>
+	</sql>
+	
+	<select id="selectTotalRecord" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+		FROM RULES
+		WHERE COM_CODE = #{comCode}
+		<include refid="searchFrag"/>
+	</select>
+	
+	<select id="selectRuleList" resultType="RuleVO" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT
+					RUL_NO, RUL_TIT, RUL_CON, TO_CHAR(RUL_DATE,'YYYY-MM-DD') AS RUL_DATE
+				FROM RULES
+				WHERE COM_CODE = #{comCode}
+				<include refid="searchFrag"/>
+				ORDER BY RUL_DATE DESC
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectRule" parameterType="int" resultMap="ruleMap">
+		SELECT RUL.RUL_NO
+    		, RUL.RUL_TIT
+    		, RUL.RUL_CON
+    		, TO_CHAR(RUL.RUL_DATE,'YYYY-MM-DD')AS RUL_DATE    
+    		, ATT.ATT_NO
+    		, ATT.ATT_FNM
+    		, ATT.ATT_SNM
+    		, ATT.ATT_FAS
+		FROM
+    		  RULES RUL               
+              LEFT OUTER JOIN ATTATCH ATT ON(RUL.RUL_NO = ATT.RUL_NO)
+              
+    	WHERE RUL.RUL_NO = #{rulNo}
+    	ORDER BY RUL.RUL_NO
+	</select>
+	
+	<insert id="insertRule" parameterType="RuleVO"> 
+		<selectKey resultType="int" keyProperty="startNo" order="BEFORE">
+			SELECT NVL(MAX(RUL_NO),0)+1
+			FROM RULES	
+		</selectKey>
+		INSERT INTO RULES
+		VALUES(
+			#{startNo}
+		,	#{comCode, jdbcType=VARCHAR}
+		,	#{rulTit, jdbcType=VARCHAR}
+		,	#{rulCon, jdbcType=VARCHAR}
+		,	SYSDATE
+		)
+	</insert>
+	<update id="updateRule" parameterType="RuleVO">
+		UPDATE RULES
+		SET
+			RUL_TIT = #{rulTit, jdbcType=VARCHAR}
+		,	RUL_CON = #{rulCon, jdbcType=VARCHAR}
+		WHERE RUL_NO = #{rulNo}
+	</update>
+	<delete id="deleteRule" parameterType="RuleVO">
+		DELETE FROM RULES
+		WHERE RUL_NO = #{rulNo}
+	</delete>
+	
+	
+</mapper>

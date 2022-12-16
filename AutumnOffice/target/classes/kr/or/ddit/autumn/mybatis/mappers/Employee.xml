@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.commons.employee.dao.EmployeeDAO"><!-- namespace에는 inface가 필요 -->
+
+	<resultMap type="kr.or.ddit.autumn.vo.EmployeeVO" id="employeeMap" autoMapping="true">
+		<id property="empId" column="EMP_ID"/>
+		<association property="empPfile" javaType="kr.or.ddit.autumn.vo.EmpPfileVO" autoMapping="true">
+			<id property="epfNo" column="EPF_NO"/>
+		</association>
+		<association property="attatch" javaType="kr.or.ddit.autumn.vo.AttatchVO" autoMapping="true">
+			<id property="attNo" column="ATT_NO"/>
+		</association>
+		<association property="department" javaType="kr.or.ddit.autumn.vo.DepartmentVO" autoMapping="true">
+			<id property="depId" column="DEP_ID"/>
+		</association>
+		<association property="job" javaType="kr.or.ddit.autumn.vo.JobVO" autoMapping="true">
+			<id property="jobId" column="JOB_ID"/>
+		</association>
+		<collection property="empRoles" ofType="string">
+			<result column="POW_ROLE"/>
+		</collection>
+	</resultMap>
+	
+	
+	<resultMap type="kr.or.ddit.autumn.vo.EmployeeVO" id="employeeMapList" autoMapping="true">
+		<id property="empId" column="EMP_ID"/>
+		<association property="department" javaType="kr.or.ddit.autumn.vo.DepartmentVO" autoMapping="true">
+			<id property="depId" column="DEP_ID"/>
+		</association>
+		<association property="job" javaType="kr.or.ddit.autumn.vo.JobVO" autoMapping="true">
+			<id property="jobId" column="JOB_ID"/>
+		</association>
+	</resultMap>
+
+
+<!-- 	<select id="AllEmployeeList" resultType="EMPLOYEEVO" parameterType="String"> -->
+<!--       SELECT * -->
+<!--       FROM EMPLOYEE -->
+<!--       WHERE COM_CODE= #{comCode,jdbcType=VARCHAR}  -->
+    
+<!--    </select> -->
+    
+    <select id="AllEmployeeList" resultMap="employeeMapList" parameterType="String">
+    	SELECT 
+		    EMP.EMP_ID
+		    , EMP.COM_CODE
+		    , EMP.DEP_ID
+		    , EMP.JOB_ID
+		    , EMP.EMP_PASS
+		    , EMP.EMP_NM
+		    , EMP.EMP_BID
+		    , EMP.EMP_MAIL
+		    , EMP.EMP_PH
+		    , EMP.EMP_ADDR
+		    , EMP.EMP_SIGN
+		    , EMP_STA
+		    , DEPT.DEP_ID
+		    , DEPT.DEP_HDC
+		    , DEPT.DEP_TNM
+		    , DEPT.DEP_NM
+		    , DEPT.DEP_MAG
+		    , J.JOB_ID
+		    , J.JOB_NM
+		FROM 
+		    EMPLOYEE EMP 
+		                LEFT OUTER JOIN DEPARTMENT DEPT ON (EMP.DEP_ID = DEPT.DEP_ID)
+		                LEFT OUTER JOIN JOB J ON (EMP.JOB_ID = J.JOB_ID)
+		WHERE EMP.COM_CODE = #{comCode,jdbcType=VARCHAR}
+    
+    </select>
+    
+        <select id="DeptEmployeeList" resultMap="employeeMapList" parameterType="String">
+    	SELECT 
+		    EMP.EMP_ID
+		    , EMP.COM_CODE
+		    , EMP.DEP_ID
+		    , EMP.JOB_ID
+		    , EMP.EMP_PASS
+		    , EMP.EMP_NM
+		    , EMP.EMP_BID
+		    , EMP.EMP_MAIL
+		    , EMP.EMP_PH
+		    , EMP.EMP_ADDR
+		    , EMP.EMP_SIGN
+		    , EMP_STA
+		    , DEPT.DEP_ID
+		    , DEPT.DEP_HDC
+		    , DEPT.DEP_TNM
+		    , DEPT.DEP_NM
+		    , DEPT.DEP_MAG
+		    , J.JOB_ID
+		    , J.JOB_NM
+		FROM 
+		    EMPLOYEE EMP 
+		                LEFT OUTER JOIN DEPARTMENT DEPT ON (EMP.DEP_ID = DEPT.DEP_ID)
+		                LEFT OUTER JOIN JOB J ON (EMP.JOB_ID = J.JOB_ID)
+		WHERE EMP.COM_CODE = #{comCode,jdbcType=VARCHAR}
+		AND DEPT.DEP_ID = #{depId,jdbcType=VARCHAR}
+    
+    </select>
+
+	<update id="offlineEmployee" parameterType="string">
+	       UPDATE EMPLOYEE      
+         SET EMP_STA = '0'   
+         WHERE EMP_ID = #{empId} 
+	</update>
+	
+	<update id="onlineEmployee" parameterType="string">
+	       UPDATE EMPLOYEE      
+         SET EMP_STA = '1'   
+         WHERE EMP_ID = #{empId} 
+	</update>
+	
+	<update id="awayEmployee" parameterType="string">
+	       UPDATE EMPLOYEE      
+         SET EMP_STA = '2'   
+         WHERE EMP_ID = #{empId} 
+	</update>
+	
+
+
+	<select id="selectEmployee" parameterType="string" resultMap="employeeMap">
+		SELECT 
+		    EMP.EMP_ID
+		    , EMP.COM_CODE
+		    , EMP.DEP_ID
+		    , EMP.JOB_ID
+		    , EMP.EMP_PASS
+		    , EMP.EMP_NM
+		    , EMP.EMP_BID
+		    , EMP.EMP_MAIL
+		    , EMP.EMP_PH
+		    , EMP.EMP_ADDR
+		    , EMP.EMP_SIGN
+		    , EMP_STA
+		    , POW.POW_ROLE
+		    , PF.EPF_NO
+		    , ATT.ATT_NO
+		    , ATT.ATT_FNM
+		    , ATT.ATT_SNM
+		    , DEPT.DEP_ID
+		    , DEPT.DEP_HDC
+		    , DEPT.DEP_TNM
+		    , DEPT.DEP_NM
+		    , DEPT.DEP_MAG
+		    , J.JOB_ID
+		    , J.JOB_NM
+		FROM 
+		    EMPLOYEE EMP LEFT OUTER JOIN POWER POW ON (EMP.EMP_ID = POW.EMP_ID)  
+		                LEFT OUTER JOIN EMP_PFILE PF ON (EMP.EMP_ID = PF.EMP_ID)
+		                LEFT OUTER JOIN ATTATCH ATT ON (PF.EPF_NO = ATT.EPF_NO)
+		                LEFT OUTER JOIN DEPARTMENT DEPT ON (EMP.DEP_ID = DEPT.DEP_ID)
+		                LEFT OUTER JOIN JOB J ON (EMP.JOB_ID = J.JOB_ID)
+		WHERE EMP.EMP_ID = #{username}
+	</select>
+	
+	
+	<insert id="insertLoginInfo" parameterType="LogVO">
+		INSERT INTO LOG
+		VALUES 
+        (
+            LOG_SEQ.NEXTVAL
+          , #{empId}
+          , #{logIp}
+          , SYSDATE
+        )
+	</insert>
+	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

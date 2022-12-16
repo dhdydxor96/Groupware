@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.management.managementindex.dao.ManagementIndexDAO">
+
+<select id="selectIndex" resultType="kr.or.ddit.autumn.management.managementindex.vo.ManagementIndexVO" parameterType="string">
+SELECT
+    C.COM_CODE
+   ,C.COM_NM
+   ,C.COM_CNM
+   ,C.COM_DOMAIN
+   ,S.SER_STD
+   ,S.SER_END
+FROM
+COMPANY C LEFT OUTER JOIN SERVICE S
+ON(S.COM_CODE = C.COM_CODE)
+WHERE C.COM_CODE = #{comCode} AND TO_CHAR(SYSDATE, 'YYYY-MM-DD')BETWEEN SER_STD AND SER_END
+</select>
+</mapper>

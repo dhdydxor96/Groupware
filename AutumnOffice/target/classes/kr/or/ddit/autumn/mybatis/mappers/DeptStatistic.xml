@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.attendance.dao.DepStatisticDAO">
+
+	<sql id="searchFrag">
+		<trim prefix="AND"  > <!-- 조건을 만족하면 사용 (처음에 열어줬다가 마지막에 닫아줌) / 아니면 사용x --> <!-- <where> -->
+			<if test="'ROLE_HEAD' eq powRole" >
+				A.DEP_ID = #{depId}
+			</if>
+		</trim>
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition1.searchWord)">
+			<!-- @org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord) -->
+				<choose>
+					<when test="'name' eq simpleCondition1.searchType">
+						AND INSTR(EMP_NM, #{simpleCondition1.searchWord}) > 0  
+					</when>		
+					<when test="'dept' eq simpleCondition1.searchType">
+						AND INSTR(DEP_NM, #{simpleCondition1.searchWord}) > 0  
+					</when>
+					<otherwise>
+							AND
+							(
+							INSTR(EMP_NM, #{simpleCondition1.searchWord}) > 0  
+							OR 
+							INSTR(DEP_NM, #{simpleCondition1.searchWord}) > 0  
+							)
+					</otherwise>		
+				</choose>
+			</if>
+	</sql>
+
+	<select id="selectDeptStatisticList" resultType="kr.or.ddit.autumn.groupware.attendance.vo.DepStatisticVO" parameterType="kr.or.ddit.autumn.groupware.attendance.vo.DepStatisticVO">
+		SELECT *
+					FROM (
+						SELECT A.*, ROWNUM RNUM
+						FROM(                                      
+			                    SELECT A.EMP_ID, JOB_NM, DEP_NM, A.EMP_NM, NVL(TO_CHAR(B.STA_IND,'YYYY-MM-DD'),TO_CHAR(SYSDATE,'YYYY-MM-DD')) STA_IND, TO_CHAR(STA_ONT,'HH24:MI:SS')STA_ONT, TO_CHAR(STA_OFT,'HH24:MI:SS')STA_OFT, VAC_CAT, STA_REC, BST_TRP
+		                        FROM EMPLOYEE A LEFT OUTER JOIN (SELECT * FROM EMP_STATUS WHERE TO_CHAR(STA_IND, 'YYYY-MM-DD') = TO_CHAR(SYSDATE,'YYYY-MM-DD'))  B
+		                        ON A.EMP_ID = B.EMP_ID 
+		                        LEFT OUTER JOIN DEPARTMENT C
+		                        ON A.DEP_ID = C.DEP_ID
+		                        LEFT OUTER JOIN JOB D
+		                        ON A.JOB_ID = D.JOB_ID
+		                        LEFT OUTER JOIN (
+		                        SELECT EMP_ID, CASE(VAC_CAT) WHEN '0' THEN '휴가' WHEN '1' THEN '포상휴가' WHEN '2' THEN '특별휴가' END AS VAC_CAT, '' STA_REC, '' BST_TRP, VAC_START, VAC_END
+		                        FROM VACATION A LEFT OUTER JOIN ELEC_APP B
+		                        ON A.ELE_NO = B.ELE_NO
+		                        WHERE TO_CHAR(SYSDATE,'YYYY-MM-DD') BETWEEN TO_CHAR(VAC_START,'YYYY-MM-DD') AND TO_CHAR(VAC_END,'YYYY-MM-DD')
+		                        UNION
+		                        SELECT EMP_ID,'' VAC_CAT, '연차', '' BST_TRP, LER_START,LER_END
+		                        FROM LVE_RECODE A LEFT OUTER JOIN AUL_LEAVE B
+		                        ON A.AUL_NO = B.AUL_NO
+		                        WHERE TO_CHAR(SYSDATE,'YYYY-MM-DD') BETWEEN TO_CHAR(LER_START,'YYYY-MM-DD') AND TO_CHAR(LER_END,'YYYY-MM-DD')
+		                        UNION
+		                        SELECT EMP_ID,'' VAC_CAT, '' STA_REC, '출장', BST_START, BST_END
+		                        FROM BUS_TRIP A LEFT OUTER JOIN ELEC_APP B
+		                        ON A.ELE_NO = B.ELE_NO
+		                        WHERE TO_CHAR(SYSDATE,'YYYY-MM-DD') BETWEEN TO_CHAR(BST_START,'YYYY-MM-DD') AND TO_CHAR(BST_END,'YYYY-MM-DD')
+		                        )E
+		                        ON A.EMP_ID = E.EMP_ID
+		                        WHERE A.COM_CODE = #{comCode}
+		                        AND EMP_END IS NULL
+		                        <include refid="searchFrag"></include> 
+		                        ORDER BY A.JOB_ID
+						) A
+					) B
+			<![CDATA[
+						WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+					]]>
+	</select>
+
+	<select id="selectTotalStatistic" resultType="int" parameterType="kr.or.ddit.autumn.groupware.attendance.vo.AttendPagingVO">
+		SELECT COUNT(*)
+		FROM(                                      
+	                  SELECT A.EMP_ID, JOB_NM, DEP_NM, A.EMP_NM, NVL(B.STA_IND,TO_CHAR(SYSDATE,'YYYY-MM-DD')) STA_IND, TO_CHAR(STA_ONT,'HH24:MI:SS')STA_ONT, TO_CHAR(STA_OFT,'HH24:MI:SS')STA_OFT, VAC_CAT, STA_REC, BST_TRP
+	                     FROM EMPLOYEE A LEFT OUTER JOIN (SELECT * FROM EMP_STATUS WHERE TO_CHAR(STA_IND, 'YYYY-MM-DD') = TO_CHAR(SYSDATE,'YYYY-MM-DD'))  B
+	                     ON A.EMP_ID = B.EMP_ID 
+	                     LEFT OUTER JOIN DEPARTMENT C
+	                     ON A.DEP_ID = C.DEP_ID
+	                     LEFT OUTER JOIN JOB D
+	                     ON A.JOB_ID = D.JOB_ID
+	                     LEFT OUTER JOIN (
+	                     SELECT EMP_ID, CASE(VAC_CAT) WHEN '0' THEN '여름휴가' WHEN '1' THEN '포상휴가' WHEN '2' THEN '특별휴가' END AS VAC_CAT, '-' STA_REC, '-' BST_TRP, VAC_START, VAC_END
+	                     FROM VACATION A LEFT OUTER JOIN ELEC_APP B
+	                     ON A.ELE_NO = B.ELE_NO
+	                     WHERE TO_CHAR(SYSDATE,'YYYY-MM-DD') BETWEEN TO_CHAR(VAC_START,'YYYY-MM-DD') AND TO_CHAR(VAC_END,'YYYY-MM-DD')
+	                     UNION
+	                     SELECT EMP_ID,'-' VAC_CAT, '연차', '-' BST_TRP, LER_START,LER_END
+	                     FROM LVE_RECODE A LEFT OUTER JOIN AUL_LEAVE B
+	                     ON A.AUL_NO = B.AUL_NO
+	                     WHERE TO_CHAR(SYSDATE,'YYYY-MM-DD') BETWEEN TO_CHAR(LER_START,'YYYY-MM-DD') AND TO_CHAR(LER_END,'YYYY-MM-DD')
+	                     UNION
+	                     SELECT EMP_ID,'-' VAC_CAT, '-' STA_REC, '출장', BST_START, BST_END
+	                     FROM BUS_TRIP A LEFT OUTER JOIN ELEC_APP B
+	                     ON A.ELE_NO = B.ELE_NO
+	                     WHERE TO_CHAR(SYSDATE,'YYYY-MM-DD') BETWEEN TO_CHAR(BST_START,'YYYY-MM-DD') AND TO_CHAR(BST_END,'YYYY-MM-DD')
+	                     )E
+	                     ON A.EMP_ID = E.EMP_ID
+	                     WHERE A.COM_CODE = #{comCode}
+	                     AND EMP_END IS NULL
+	                     <include refid="searchFrag"></include> 
+	                     ORDER BY A.JOB_ID
+		) A
+	</select>
+	
+	
+	<select id="selectCompanyWorkTime" parameterType="String" resultType="EmpTimeVO">
+		SELECT *
+		FROM EMP_TIME
+		WHERE COM_CODE =#{comCode}	
+	</select>
+	
+	<select id="selectDeptStatisticAll" parameterType="kr.or.ddit.autumn.groupware.attendance.vo.DepStatisticVO" resultType="kr.or.ddit.autumn.groupware.attendance.vo.DepStatisticVO">
+		SELECT A.EMP_ID, JOB_NM, DEP_NM, A.EMP_NM, NVL(B.STA_IND,TO_CHAR(SYSDATE,'YYYY-MM-DD')) STA_IND, TO_CHAR(STA_ONT,'HH24:MI:SS')STA_ONT, TO_CHAR(STA_OFT,'HH24:MI:SS')STA_OFT, VAC_CAT, STA_REC, BST_TRP
+		FROM EMPLOYEE A LEFT OUTER JOIN (SELECT * FROM EMP_STATUS WHERE TO_CHAR(STA_IND, 'YYYY-MM-DD') = TO_CHAR(SYSDATE,'YYYY-MM-DD'))  B
+		ON A.EMP_ID = B.EMP_ID 
+		LEFT OUTER JOIN DEPARTMENT C
+		ON A.DEP_ID = C.DEP_ID
+		LEFT OUTER JOIN JOB D
+		ON A.JOB_ID = D.JOB_ID
+		LEFT OUTER JOIN (
+		SELECT EMP_ID, CASE(VAC_CAT) WHEN '0' THEN '여름휴가' WHEN '1' THEN '포상휴가' WHEN '2' THEN '특별휴가' END AS VAC_CAT, '' STA_REC, '' BST_TRP, VAC_START, VAC_END
+		FROM VACATION A LEFT OUTER JOIN ELEC_APP B
+		ON A.ELE_NO = B.ELE_NO
+		WHERE TO_CHAR(SYSDATE,'YYYY-MM-DD') BETWEEN TO_CHAR(VAC_START,'YYYY-MM-DD') AND TO_CHAR(VAC_END,'YYYY-MM-DD')
+		UNION
+		SELECT EMP_ID,'' VAC_CAT, '연차', '' BST_TRP, LER_START,LER_END
+		FROM LVE_RECODE A LEFT OUTER JOIN AUL_LEAVE B
+		ON A.AUL_NO = B.AUL_NO
+		WHERE TO_CHAR(SYSDATE,'YYYY-MM-DD') BETWEEN TO_CHAR(LER_START,'YYYY-MM-DD') AND TO_CHAR(LER_END,'YYYY-MM-DD')
+		UNION
+		SELECT EMP_ID,'' VAC_CAT, '' STA_REC, '출장', BST_START, BST_END
+		FROM BUS_TRIP A LEFT OUTER JOIN ELEC_APP B
+		ON A.ELE_NO = B.ELE_NO
+		WHERE TO_CHAR(SYSDATE,'YYYY-MM-DD') BETWEEN TO_CHAR(BST_START,'YYYY-MM-DD') AND TO_CHAR(BST_END,'YYYY-MM-DD')
+		)E
+		ON A.EMP_ID = E.EMP_ID
+		WHERE A.COM_CODE = #{comCode}
+		AND EMP_END IS NULL
+		<if test="'ROLE_HEAD' eq powRole" >
+		AND A.DEP_ID = #{depId}
+		</if>
+		ORDER BY A.JOB_ID
+	</select>
+	
+	
+
+</mapper>

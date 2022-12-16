@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.management.menu.dao.CommunityManagerDAO">
+	
+	<sql id="searchFrag">
+		<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+			<choose>
+				<when test="'id' eq simpleCondition.searchType">
+					AND	INSTR(BO_CODE, #{simpleCondition.searchWord}) > 0
+				</when>
+				<when test="'name' eq simpleCondition.searchType">
+					AND INSTR(BO_TYPE, #{simpleCondition.searchWord}) > 0
+				</when>
+				<otherwise>
+					AND INSTR(BO_CODE, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(BO_TYPE, #{simpleCondition.searchWord}) > 0
+				</otherwise>
+			</choose>
+		</if>
+	</sql>
+	
+	<resultMap type="BoardVO" id="boardListMap" autoMapping="true">
+		<id property="boCode" column="BO_CODE" />	
+	</resultMap>
+	
+	<select id="selectCommunityList" resultMap="boardListMap" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM	
+			FROM(
+				SELECT 		BO_CODE
+						,	COM_CODE
+						,	BO_TYPE
+						,	BO_YN 
+				FROM BOARD
+				WHERE COM_CODE = #{comCode}
+				<include refid="searchFrag" />
+			)A ORDER BY RNUM DESC
+		)B
+		<![CDATA[
+			WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectTotalRecord" resultType="int" parameterType="PagingVO">
+		SELECT	COUNT(*)
+		FROM BOARD
+		WHERE COM_CODE = #{comCode}
+		<include refid="searchFrag" />
+	</select>
+	
+	<insert id="insertCommunity">
+		INSERT INTO board (
+		    	BO_CODE
+		    ,	COM_CODE
+		    ,	BO_TYPE
+		    ,	BO_YN
+		) VALUES (
+		   		#{boCode, jdbcType=VARCHAR}
+		   ,	#{comCode, jdbcType=VARCHAR}
+		   ,	#{boType, jdbcType=VARCHAR}
+		   ,	#{boYn, jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<update id="updateCommunity">
+		UPDATE BOARD
+		SET
+				BO_CODE= #{boCode, jdbcType=VARCHAR}
+			,	COM_CODE = #{comCode, jdbcType=VARCHAR}
+		WHERE COM_CODE = #{comCode}
+	</update>
+
+	<delete id="deleteCommunity" parameterType="string">
+		DELETE	
+		FROM	BOARD
+		WHERE	BO_CODE = #{boCode}
+	</delete>
+	
+	<select id="searchCode" resultType="string" parameterType="string">
+		SELECT BO_CODE FROM BOARD WHERE BO_CODE = #{code}
+	</select>
+	
+	<select id="retrieveChildPost" parameterType="string" resultType="PostVO">
+		SELECT PO_NO
+		FROM BOARD B INNER JOIN POST P ON (B.BO_CODE = P.BO_CODE)
+		WHERE B.BO_CODE = #{boCode}
+	</select>
+	
+	<delete id="deleteChildPost" parameterType="PostVO">
+		DELETE 
+		FROM	POST
+		WHERE	PO_NO = #{poNo}
+	</delete>
+	
+	<delete id="deleteComment" parameterType="PostVO">
+		DELETE FROM COMMENTS WHERE PO_NO = #{poNo}
+	</delete>
+	
+	<select id="selectAttatchList" parameterType="PostVO" resultType="AttatchVO">
+		SELECT * FROM ATTATCH WHERE PO_NO = #{poNo}
+	</select>
+	
+</mapper>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.management.base.dao.MenuManageDAO">
+
+<resultMap type="kr.or.ddit.autumn.vo.EmployeeVO" id="employeeMap" autoMapping="true">
+		<id property="empId" column="EMP_ID"/>
+<association property="department" javaType="kr.or.ddit.autumn.vo.DepartmentVO" autoMapping="true">
+			<id property="depId" column="DEP_ID"/>
+		</association>		
+<association property="job" javaType="kr.or.ddit.autumn.vo.JobVO" autoMapping="true">
+			<id property="jobId" column="JOB_ID"/>
+		</association>
+</resultMap>
+
+
+<select id="AllEmployeeList" parameterType="String" resultMap="employeeMap">
+SELECT 
+     EMP.EMP_ID
+    ,EMP.EMP_NM    
+    ,DEP.DEP_NM   
+    ,JO.JOB_NM
+FROM EMPLOYEE EMP LEFT OUTER JOIN DEPARTMENT DEP ON(EMP.DEP_ID = DEP.DEP_ID)
+                  LEFT OUTER JOIN JOB JO ON(EMP.JOB_ID = JO.JOB_ID)
+                  WHERE EMP.COM_CODE = #{comCode};
+</select>
+
+
+</mapper>

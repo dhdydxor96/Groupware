@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.chat.dao.MessageDAO"><!-- namespace에는 inface가 필요 -->
+
+
+	<resultMap type="MessageVO" id="messageListMap" autoMapping="true" >
+		<collection property="chatRoomList" ofType="ChatRoomVO" autoMapping="true">
+			<id property="roomId" column="ROOM_ID"/>
+		</collection>
+	</resultMap>
+
+	<resultMap type="ChatRoomCustomVO" id="chatListMap" autoMapping="true" >
+		<id property="roomId" column="ROOM_ID"/>
+		<collection property="empList" ofType="MessageVO" autoMapping="true">
+			
+			<id property="empId" column="EMP_ID"/>
+		</collection>
+	</resultMap>
+
+
+	
+	<select id="selectChatRoomList"   resultMap="messageListMap" parameterType="String">
+		SELECT DISTINCT C.ROOM_NAME, C.ROOM_ID
+		FROM MESSAGE M INNER JOIN CHATROOM C
+		ON(M.ROOM_ID = C.ROOM_ID)
+		WHERE M.EMP_ID = #{empId,jdbcType=VARCHAR}
+		AND M.MSG_CON = '0'                 
+	</select>
+	
+	<select id="selectChatRoomCustomList" resultMap="chatListMap" parameterType="String">
+	  SELECT 
+	    A.ROOM_ID
+	    , A.ROOM_NAME
+	    , B.EMP_ID
+	    , B.MSG_NEW
+	    FROM CHATROOM A INNER JOIN MESSAGE B ON(A.ROOM_ID = B.ROOM_ID)
+	    WHERE EXISTS (SELECT *
+	                FROM MESSAGE C
+	                WHERE 
+	                A.ROOM_ID = C.ROOM_ID
+	                AND EMP_ID = #{empId,jdbcType=VARCHAR}
+	                AND C.MSG_CON = 0)
+	</select>
+	
+	<select id="selectMessageList"   resultType="MessageVO" parameterType="Integer">
+		SELECT *
+		FROM MESSAGE
+		WHERE ROOM_ID = #{roomId,jdbcType=INTEGER}               
+	</select>
+
+	<insert id="insertMessage" parameterType="MessageVO">
+	<selectKey resultType="int" keyProperty="msgNo" order="BEFORE">
+	SELECT NVL(MAX(MSG_NO), 0) + 1 FROM MESSAGE
+	</selectKey>
+		INSERT INTO MESSAGE (         
+			 MSG_NO
+			,MSG_CON
+			,ROOM_ID
+			,EMP_ID
+			,MSG_SDT
+			,MSG_NEW
+		
+			 ) VALUES (               
+					  #{msgNo,jdbcType=INTEGER}
+<!-- 					, #{msgCon,jdbcType=VARCHAR} -->
+					,'0'
+					, #{roomId,jdbcType=INTEGER}
+					, #{empId,jdbcType=VARCHAR}
+					, sysdate
+					, #{msgNew,jdbcType=VARCHAR}
+				
+			)						 
+	</insert>
+	
+
+	
+	<update id="deleteChat" parameterType="MessageVO">
+	    UPDATE MESSAGE
+        SET MSG_CON = '1'
+        WHERE ROOM_ID = #{roomId,jdbcType=INTEGER}
+        AND EMP_ID = #{empId,jdbcType=VARCHAR}
+	</update>
+
+	
+	<delete id="deleteMessage" parameterType="MessageVO">
+	    DELETE FROM MESSAGE
+		WHERE ROOM_ID = #{roomId,jdbcType=INTEGER}
+		AND EMP_ID = #{empId,jdbcType=VARCHAR}
+	</delete>
+	
+	<update id="updateNewChatRoom" parameterType="MessageVO">
+		UPDATE MESSAGE
+        SET MSG_NEW = '0'
+        WHERE ROOM_ID = #{roomId,jdbcType=INTEGER}
+        AND EMP_ID = #{empId,jdbcType=VARCHAR}
+	</update>
+	
+</mapper>
+
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

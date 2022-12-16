@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.web.advice.dao.AdviceReplyDAO">
+	<resultMap type="AdviceReplyVO" id="replyMap" autoMapping="true">
+		<id property="arepNo" column="AREP_NO"/>
+	</resultMap>
+	
+	<select id="adviceReplyList" parameterType="int" resultType="AdviceReplyVO">
+		SELECT
+			AREP_NO
+			,	AREP_WRI
+			,	AREP_CON
+			,	AREP_DATE
+		FROM ADV_REPLY
+		WHERE ADV_NO = #{advNo}
+		ORDER BY AREP_NO ASC
+	</select>
+	
+	<insert id="insertReply" parameterType="AdviceReplyVO">
+	<selectKey resultType="int" keyProperty="arepNo" order="BEFORE">
+		SELECT REPLY_SEQ.nextval
+		FROM DUAL
+	</selectKey>
+		INSERT INTO ADV_REPLY(
+			AREP_NO
+			,	ADV_NO
+			,	AREP_CON
+			,	AREP_WRI
+			,	AREP_DATE
+		)VALUES(
+			#{arepNo}
+			,	#{advNo}
+			,	#{arepCon}
+			,	#{arepWri}
+			,	SYSDATE
+		)
+	</insert>
+	
+	<delete id="deleteReply" parameterType="AdviceReplyVO">
+		DELETE FROM ADV_REPLY
+		WHERE AREP_NO = #{arepNo}
+	</delete>
+</mapper>

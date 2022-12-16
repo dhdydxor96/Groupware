@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.survey.dao.SurveyDAO">
+
+	<sql id="searchFrag">
+		WHERE COM_CODE = #{comCode}
+		<trim prefix="AND (" suffix=")">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(SUR_TITLE, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'writer' eq simpleCondition.searchType">
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(SUR_TITLE, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<select id="selectTotalRecord" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+		FROM SURVEY A LEFT OUTER JOIN EMPLOYEE B
+		ON A.EMP_ID = B.EMP_ID
+		<include refid="searchFrag"/>
+	</select>
+	
+	<select id="selectSurveyList" resultType="SurveyVO" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT 
+					A.SUR_NO
+				,	A.EMP_ID
+				,	A.SUR_TITLE
+				,	A.SUR_PURPOSE
+				,	A.SUR_GUIDE
+				,	TO_CHAR(A.SUR_SDATE, 'YYYY-MM-DD') SUR_SDATE
+				,	TO_CHAR(A.SUR_EDATE, 'YYYY-MM-DD') SUR_EDATE
+				,	A.SUR_STATE
+				,	TO_CHAR(A.SUR_INSDAT, 'YYYY-MM-DD') SUR_INSDAT
+				,	B.EMP_PASS
+				,	B.EMP_NM
+				,	B.EMP_BID
+				,	B.EMP_MAIL
+				,	B.EMP_PH
+				,	B.EMP_ADDR
+				,	B.EMP_HID
+				,	B.EMP_END
+				FROM SURVEY A LEFT OUTER JOIN EMPLOYEE B
+				ON A.EMP_ID = B.EMP_ID
+				<include refid="searchFrag"/>
+				ORDER BY A.SUR_INSDAT DESC
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectSurvey" parameterType="int" resultType="SurveyVO">
+		SELECT
+		A.SUR_NO
+			,	A.EMP_ID
+			,	A.SUR_TITLE
+			,	A.SUR_PURPOSE
+			,	A.SUR_GUIDE
+			,	TO_CHAR(A.SUR_SDATE, 'YYYY-MM-DD') SUR_SDATE
+			,	TO_CHAR(A.SUR_EDATE, 'YYYY-MM-DD') SUR_EDATE
+			,	A.SUR_STATE
+			,	TO_CHAR(A.SUR_INSDAT, 'YYYY-MM-DD') SUR_INSDAT
+			,	B.EMP_PASS
+			,	B.EMP_NM
+			,	B.EMP_BID
+			,	B.EMP_MAIL
+			,	B.EMP_PH
+			,	B.EMP_ADDR
+			,	B.EMP_HID
+			,	B.EMP_END
+		FROM SURVEY A LEFT OUTER JOIN EMPLOYEE B
+		ON A.EMP_ID = B.EMP_ID
+		WHERE A.SUR_NO = #{surNo}
+	</select>
+	
+	<insert id="insertSurvey" parameterType="SurveyVO">
+		INSERT INTO SURVEY
+		(
+			SUR_NO
+			,	EMP_ID
+			,	SUR_TITLE
+			,	SUR_PURPOSE
+			,	SUR_GUIDE
+			,	SUR_SDATE
+			,	SUR_EDATE
+			,	SUR_STATE
+			,	SUR_INSDAT
+		)VALUES(
+				SER_SEQ.nextval
+			,	#{empId, jdbcType=VARCHAR}
+			,	#{surTitle, jdbcType=VARCHAR}
+			,	#{surPurpose, jdbcType=VARCHAR}
+			,	#{surGuide, jdbcType=VARCHAR}
+			,	#{surSdate, jdbcType=DATE}
+			,	#{surEdate, jdbcType=DATE}
+			,	0
+			,	SYSDATE
+		)
+	</insert>
+	
+	<update id="updateSurvey" parameterType="SurveyVO">
+		UPDATE SURVEY
+		SET
+				SUR_NO = #{surNo, jdbcType=NUMERIC}
+			,	SUR_TITLE = #{surTitle, jdbcType=VARCHAR}
+			,	SUR_PURPOSE = #{surPurpose, jdbcType=VARCHAR}
+			,	SUR_GUIDE = #{surGuide, jdbcType=VARCHAR}
+			,	SUR_SDATE = #{surSdate, jdbcType=DATE}
+			,	SUR_EDATE = #{surEdate, jdbcType=DATE}
+		WHERE SUR_NO = #{surNo}
+	</update>
+	
+	<delete id="deleteSurvey" parameterType="SurveyVO">
+		DELETE FROM SURVEY
+		WHERE SUR_NO = #{surNo}
+	</delete>
+	
+	<update id="updateSurveyStateOne" parameterType="SurveyVO">
+		UPDATE SURVEY A
+		SET SUR_STATE = 1
+		WHERE SUR_NO = (
+		    SELECT SUR_NO
+		    FROM SURVEY B
+		    WHERE TO_CHAR(SYSDATE, 'YYYY-MM-DD') BETWEEN TO_CHAR(SUR_SDATE, 'YYYY-MM-DD') AND TO_CHAR(SUR_EDATE, 'YYYY-MM-DD')
+		    AND A.SUR_NO = B.SUR_NO
+		)
+	</update>
+	
+	<update id="updateSurveyStateTwo" parameterType="SurveyVO">
+		UPDATE SURVEY A
+		SET SUR_STATE = 2
+		WHERE SUR_NO = (
+		    SELECT SUR_NO
+		    FROM SURVEY B
+		    WHERE TO_CHAR(SYSDATE, 'YYYY-MM-DD') > TO_CHAR(SUR_EDATE, 'YYYY-MM-DD')
+		    AND A.SUR_NO = B.SUR_NO
+		)
+	</update>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

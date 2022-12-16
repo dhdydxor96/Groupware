@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.board.dao.CommentDAO">
+	
+	<select id="selectCommentList" parameterType="PagingVO" resultType="CommentsVO">
+		SELECT	COT_NO
+			,	PO_NO
+			,	COT_CON
+			,	TO_CHAR(COT_CRD, 'YYYY-MM-DD HH:MI') as COT_CRD
+			,	C.EMP_ID
+			,	E.EMP_NM
+		FROM COMMENTS C LEFT OUTER JOIN EMPLOYEE E ON (C.EMP_ID = E.EMP_ID)
+		WHERE PO_NO = #{detailCondition.poNo}
+		ORDER BY COT_CRD ASC
+	</select>
+	
+	<insert id="insertComment" parameterType="CommentsVO">
+		<selectKey resultType="int" keyProperty="cotNo" order="BEFORE">
+			SELECT NVL(MAX(COT_NO), 0) + 1
+			FROM COMMENTS
+		</selectKey>
+		INSERT INTO COMMENTS
+		(
+				COT_NO
+			,	PO_NO
+			,	COT_CON
+			,	COT_CRD
+			,	EMP_ID
+		)VALUES(
+			#{cotNo,jdbcType=NUMERIC}
+			, #{poNo,jdbcType=NUMERIC}
+			, #{cotCon, jdbcType=VARCHAR}
+			,	SYSDATE	
+			, #{empId,jdbcType=VARCHAR}
+		)
+	</insert>
+	<delete id="deleteComment" parameterType="CommentsVO">
+		DELETE FROM COMMENTS
+		WHERE PO_NO = #{poNo}
+		AND COT_NO = #{cotNo}
+	</delete>
+	<update id="updateComment" parameterType="CommentsVO">
+		UPDATE COMMENTS
+		SET
+			COT_CON = #{cotCon, jdbcType=VARCHAR}
+		WHERE PO_NO = #{poNo}
+		AND	  COT_NO = #{cotNo}
+	</update>
+</mapper>

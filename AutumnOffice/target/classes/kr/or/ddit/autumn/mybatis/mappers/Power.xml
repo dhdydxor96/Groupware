@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.management.group.employee.dao.ManagementEmployeePowerDAO">
+	<resultMap type="PowerVO" id="powerMap" autoMapping="true">
+		<id property="powNo" column="POW_NO"/>
+		<association property="employee" javaType="EmployeeVO" autoMapping="true"/>
+		<association property="department" javaType="DepartmentVO" autoMapping="true"/>
+		<association property="job" javaType="JobVO" autoMapping="true"/>
+	</resultMap>
+	
+	<sql id="searchDirectorFrag">
+		WHERE A.COM_CODE = #{comCode} AND D.POW_ROLE = 'ROLE_DIRECTOR'
+		<trim prefix="AND (" suffix=")">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'writer' eq simpleCondition.searchType">
+						INSTR(JOB_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'content' eq simpleCondition.searchType">
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(JOB_NM, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<sql id="searchHeadFrag">
+		WHERE A.COM_CODE = #{comCode} AND D.POW_ROLE = 'ROLE_HEAD'
+		<trim prefix="AND (" suffix=")">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'writer' eq simpleCondition.searchType">
+						INSTR(JOB_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'content' eq simpleCondition.searchType">
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(JOB_NM, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<insert id="insertUser" parameterType="String">
+		INSERT INTO POWER
+		VALUES(
+			POW_SEQ.nextval
+		,	#{empId}
+		,	'ROLE_USER'	
+		)
+	</insert>
+	
+	<insert id="insertHead" parameterType="String">
+		INSERT INTO POWER
+		VALUES(
+			POW_SEQ.nextval
+		,	#{empId}
+		,	'ROLE_HEAD'	
+		)
+	</insert>
+	
+	<insert id="insertDirector" parameterType="String">
+		INSERT INTO POWER
+		VALUES(
+			POW_SEQ.nextval
+		,	#{empId}
+		,	'ROLE_DIRECTOR'	
+		)
+	</insert>
+	
+	<delete id="deletePowerUser" parameterType="PowerVO">
+		DELETE FROM POWER
+		WHERE POW_NO = #{powNo} AND POW_ROLE = 'ROLE_USER'
+	</delete>
+	
+	<delete id="deletePowerHead" parameterType="PowerVO">
+		DELETE FROM POWER
+		WHERE POW_NO = #{powNo} AND POW_ROLE = 'ROLE_HEAD'
+	</delete>
+	
+	<delete id="deletePowerDirector" parameterType="PowerVO">
+		DELETE FROM POWER
+		WHERE POW_NO = #{powNo} AND POW_ROLE = 'ROLE_DIRECTOR'
+	</delete>
+	
+	<select id="selectHeadRecord" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+		FROM EMPLOYEE A LEFT OUTER JOIN DEPARTMENT B
+				ON A.DEP_ID = B.DEP_ID
+				LEFT OUTER JOIN JOB C
+				ON A.JOB_ID = C.JOB_ID
+				LEFT OUTER JOIN POWER D
+                ON A.EMP_ID = D.EMP_ID
+		<include refid="searchHeadFrag"/>
+	</select>
+	
+	<select id="selectEmployeeHeadList" resultMap="powerMap" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT 
+				A.EMP_ID
+			,	A.EMP_PASS
+			,	A.EMP_NM
+			,	A.EMP_BID
+			,	A.EMP_MAIL
+			,	A.EMP_PH
+			,	A.EMP_ADDR
+			,	A.EMP_HID
+			,	B.DEP_ID
+			,	B.DEP_HDC
+			,	B.DEP_TNM
+			,	B.DEP_NM
+			,	B.DEP_MAG
+			, 	C.JOB_ID
+			,	C.JOB_HJC
+			,	C.JOB_TNM
+			,	C.JOB_NM
+			,	D.POW_NO
+			,	D.POW_ROLE
+				FROM EMPLOYEE A LEFT OUTER JOIN DEPARTMENT B
+				ON A.DEP_ID = B.DEP_ID
+				LEFT OUTER JOIN JOB C
+				ON A.JOB_ID = C.JOB_ID
+				LEFT OUTER JOIN POWER D
+                ON A.EMP_ID = D.EMP_ID
+				<include refid="searchHeadFrag"/>
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectDirectorRecord" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+		FROM EMPLOYEE A LEFT OUTER JOIN DEPARTMENT B
+				ON A.DEP_ID = B.DEP_ID
+				LEFT OUTER JOIN JOB C
+				ON A.JOB_ID = C.JOB_ID
+				LEFT OUTER JOIN POWER D
+                ON A.EMP_ID = D.EMP_ID
+		<include refid="searchDirectorFrag"/>
+	</select>
+	
+	<select id="selectEmployeeDirectorList" resultMap="powerMap" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT 
+				A.EMP_ID
+			,	A.EMP_PASS
+			,	A.EMP_NM
+			,	A.EMP_BID
+			,	A.EMP_MAIL
+			,	A.EMP_PH
+			,	A.EMP_ADDR
+			,	A.EMP_HID
+			,	B.DEP_ID
+			,	B.DEP_HDC
+			,	B.DEP_TNM
+			,	B.DEP_NM
+			,	B.DEP_MAG
+			, 	C.JOB_ID
+			,	C.JOB_HJC
+			,	C.JOB_TNM
+			,	C.JOB_NM
+			,	D.POW_NO
+			,	D.POW_ROLE
+				FROM EMPLOYEE A LEFT OUTER JOIN DEPARTMENT B
+				ON A.DEP_ID = B.DEP_ID
+				LEFT OUTER JOIN JOB C
+				ON A.JOB_ID = C.JOB_ID
+				LEFT OUTER JOIN POWER D
+                ON A.EMP_ID = D.EMP_ID
+				<include refid="searchDirectorFrag"/>
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectPower" parameterType="String" resultType="PowerVO" >
+		SELECT *
+		FROM POWER
+		WHERE EMP_ID = #{empId}
+	</select>
+</mapper>

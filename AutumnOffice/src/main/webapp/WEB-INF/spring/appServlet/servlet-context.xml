@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd">
+
+	<context:component-scan base-package="kr.or.ddit.autumn" use-default-filters="false">
+		<context:include-filter type="annotation" 
+			expression="org.springframework.stereotype.Controller"/>	
+		<context:include-filter type="annotation" 
+			expression="org.springframework.web.bind.annotation.ControllerAdvice"/>	
+	</context:component-scan>
+	
+	<mvc:annotation-driven>
+		<mvc:argument-resolvers>
+			<bean class="org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver" id="authenticationPrincipalArgumentResolver"/>
+		</mvc:argument-resolvers>
+	</mvc:annotation-driven>
+	
+	<mvc:interceptors>
+		<bean id="webContentInterceptor" class="org.springframework.web.servlet.mvc.WebContentInterceptor"
+			p:cacheSeconds="0"
+			p:useCacheControlHeader="true"
+			p:useCacheControlNoStore="true"
+			p:useExpiresHeader="true"
+		/>
+	</mvc:interceptors>
+
+	
+
+	<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver" 
+		p:prefix="/WEB-INF/views/"
+		p:suffix=".jsp"
+	/>
+	
+	<bean class="org.springframework.web.servlet.view.tiles3.TilesConfigurer"
+		p:definitions="/WEB-INF/tiles/*-tiles.xml"
+	/>
+	<bean class="org.springframework.web.servlet.view.tiles3.TilesViewResolver"
+		p:order="1"
+	/>
+	
+	<bean id="downloadView" class="kr.or.ddit.autumn.commons.download.DownloadView"/>
+	<bean class="org.springframework.web.servlet.view.BeanNameViewResolver"
+		p:order="2"
+	/>
+	
+	<bean id="ImageView" class="kr.or.ddit.autumn.commons.ImageView.ImageView"/>
+	<bean class="org.springframework.web.servlet.view.BeanNameViewResolver"
+		p:order="3"
+	/>
+	
+	<mvc:resources mapping="/resources/**" location="/resources/" />
+<!-- 	<mvc:resources mapping="/web/**" location="/resources/web/assets/" /> -->
+	
+</beans>

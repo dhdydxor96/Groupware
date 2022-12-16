@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.management.menu.dao.AppFormDAO">
+	<sql id="searchFrag">
+		WHERE COM_CODE = #{comCode}
+		<trim prefix="AND (" suffix=")">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(APF_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'writer' eq simpleCondition.searchType">
+						INSTR(APF_CAT, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(APF_NM, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(APF_CAT, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<select id="selectTotalRecord" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+		FROM APP_FORM
+		<include refid="searchFrag"/>
+	</select>
+	
+	<select id="selectAppFormList" resultType="AppFormVO" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT *
+		        FROM APP_FORM
+				<include refid="searchFrag"/>
+			)A
+		)B
+	</select>
+
+	<insert id="insertAppForm" parameterType="AppFormVO">
+		INSERT INTO APP_FORM
+		(
+				APF_NO
+			,	COM_CODE
+			,	APF_NM
+			,	APF_CAT
+			,	APF_FAYN
+		)VALUES(
+				APPFORM_SEQ.nextval
+			,	#{comCode, jdbcType=VARCHAR}
+			,	#{apfNm, jdbcType=VARCHAR}
+			,	#{apfCat, jdbcType=VARCHAR}
+			,	'Y'
+		)
+		
+	</insert>
+	
+	<delete id="deleteAppForm" parameterType="AppFormVO">
+		DELETE FROM APP_FORM
+		WHERE APF_NO = #{apfNo}
+	</delete>
+</mapper>

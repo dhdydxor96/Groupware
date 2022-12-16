@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.attendance.dao.MyAnnualDao">
+
+	<sql id="searchFrag">
+		<trim prefix="AND" > <!-- 조건을 만족하면 사용 (처음에 열어줬다가 마지막에 닫아줌) / 아니면 사용x --> <!-- <where> -->
+				<choose>
+					<when test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.startDay) and
+					!@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.endDay)">
+						LER_START BETWEEN #{simpleCondition.startDay}  AND SYSDATE
+					</when>		
+					<when test="!@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.startDay) and
+					@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.endDay)">
+						LER_START BETWEEN '1990/01/01' AND #{simpleCondition.endDay} 
+					</when>
+					<when test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.startDay) and 
+								@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.endDay)">
+						LER_START BETWEEN #{simpleCondition.startDay}  AND #{simpleCondition.endDay} 
+					</when>
+					<otherwise>
+							
+					</otherwise>		
+				</choose>
+		</trim>
+	</sql>
+
+	<select id="selectEmployee" parameterType="string" resultType="kr.or.ddit.autumn.groupware.attendance.vo.AnnualVO">
+		SELECT E.EMP_NM, J.JOB_NM, E.AUL_COT, E.AUL_LOT
+		FROM(
+		SELECT A.EMP_NM EMP_NM, B.AUL_COT AUL_COT, B.AUL_LOT AUL_LOT, A.JOB_ID JOB_ID
+		FROM EMPLOYEE A LEFT OUTER JOIN AUL_LEAVE B
+		ON A.EMP_ID = B.EMP_ID
+		WHERE A.EMP_ID = #{empId}
+		) E LEFT OUTER JOIN JOB J
+		ON E.JOB_ID = J.JOB_ID
+		
+	</select>
+	
+	<select id="selectMyAnnualRecodeList"  resultType="kr.or.ddit.autumn.groupware.attendance.vo.AnnualRecodeVO" parameterType="kr.or.ddit.autumn.groupware.attendance.vo.AnnualRecodeVO">
+		SELECT *
+			FROM (
+				SELECT A.*, ROWNUM RNUM
+				FROM(
+					SELECT LER_CODE, EMP_NM, DEP_NM, TO_CHAR(LER_START , 'YYYY-MM-DD') LER_START, TO_CHAR(LER_END, 'YYYY-MM-DD') LER_END, (LER_END - LER_START+1) LER_DAY
+					FROM LVE_RECODE A LEFT OUTER JOIN AUL_LEAVE B
+					ON A.AUL_NO = B.AUL_NO
+					LEFT OUTER JOIN EMPLOYEE C
+					ON B.EMP_ID = C.EMP_ID
+					LEFT OUTER JOIN DEPARTMENT D
+					ON C.DEP_ID = D.DEP_ID
+					WHERE B.EMP_ID = #{empId}
+					<include refid="searchFrag"></include>
+					ORDER BY LER_START DESC
+				) A
+			) B
+			<![CDATA[
+			WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	
+	<select id="selectTotalRecord" parameterType="kr.or.ddit.autumn.groupware.attendance.vo.AttendPagingVO" resultType="int">
+			SELECT COUNT(*)
+			FROM LVE_RECODE A LEFT OUTER JOIN AUL_LEAVE B
+			ON A.AUL_NO = B.AUL_NO
+			LEFT OUTER JOIN EMPLOYEE C
+			ON B.EMP_ID = C.EMP_ID
+			WHERE B.EMP_ID = #{empId}
+			<include refid="searchFrag"></include>
+	</select> 
+
+</mapper>
+
+

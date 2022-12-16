@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.web.advice.dao.AdviceDAO">
+	<resultMap type="AdviceVO" id="adviceMap" autoMapping="true">
+		<id property="advNo" column="ADV_NO"/>
+		<collection property="attatchList" ofType="AttatchVO" autoMapping="true">
+			<id property="attNo" column="ATT_NO"/>
+		</collection>
+	</resultMap>
+	
+	<!-- 문의사항게시글 목록 조회 : 페이징 + 검색(제목-title, 작성자-writer, 내용-content, 전체 -->
+	<sql id="searchFrag">
+		<trim prefix="WHERE" prefixOverrides="AND">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(ADV_TIT, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'writer' eq simpleCondition.searchType">
+						INSTR(ADV_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'content' eq simpleCondition.searchType">
+						INSTR(ADV_CON, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(ADV_TIT, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(ADV_NM, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(ADV_CON, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<select id="selectTotalRecord" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+		FROM ADVICE
+		<include refid="searchFrag"/>
+	</select>
+	
+	<select id="selectAdviceList" resultType="AdviceVO" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT
+					ADV_NO, ADV_TIT, ADV_NM, TO_CHAR(ADV_DATE, 'YYYY-MM-DD') ADV_DATE
+				FROM ADVICE
+				<include refid="searchFrag"/>
+				ORDER BY ROWID DESC
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectAdvice" parameterType="int" resultMap="adviceMap">
+		SELECT
+				A.ADV_NO 
+			,	ADV_TIT
+			,	ADV_NM
+			,	ADV_PASS
+			,	ADV_PH
+			,	ADV_CON
+			,	TO_CHAR(ADV_DATE, 'YYYY-MM-DD') ADV_DATE
+			,	ATT_NO
+			,	ATT_FNM
+			,	ATT_FAS
+			,	ATT_SNM
+			,	B.ADV_NO
+		FROM
+			ADVICE A LEFT OUTER JOIN ATTATCH B
+			ON (A.ADV_NO = B.ADV_NO)
+		WHERE A.ADV_NO = #{advNo}
+	</select>
+	
+	<insert id="insertAdvice" parameterType="AdviceVO">
+		<selectKey resultType="int" keyProperty="advNo" order="BEFORE">
+			SELECT ADV_SEQ.nextval
+			FROM DUAL
+		</selectKey>
+	INSERT INTO ADVICE
+		(
+			ADV_NO
+			,	ADV_TIT
+			,	ADV_NM
+			,	ADV_PASS
+			,	ADV_PH
+			,	ADV_CON
+			,	ADV_DATE
+		)VALUES(
+			#{advNo, jdbcType=NUMERIC}
+		,	#{advTit, jdbcType=VARCHAR}
+		,	#{advNm, jdbcType=VARCHAR}
+		,	#{advPass, jdbcType=VARCHAR}
+		,	#{advPh, jdbcType=VARCHAR}
+		,	#{advCon, jdbcType=VARCHAR}
+		,	SYSDATE
+		)
+	</insert>
+	<update id="updateAdvice" parameterType="AdviceVO">
+		UPDATE ADVICE
+		SET
+			ADV_TIT = #{advTit, jdbcType=VARCHAR}
+		,	ADV_NM = #{advNm, jdbcType=VARCHAR}
+		,	ADV_PH = #{advPh, jdbcType=VARCHAR}
+		,	ADV_CON = #{advCon, jdbcType=VARCHAR}
+		WHERE ADV_NO = #{advNo}
+	</update>
+	<delete id="deleteAdvice" parameterType="AdviceVO">
+		DELETE FROM ADVICE
+		WHERE ADV_NO = #{advNo}
+	</delete>
+	
+</mapper>

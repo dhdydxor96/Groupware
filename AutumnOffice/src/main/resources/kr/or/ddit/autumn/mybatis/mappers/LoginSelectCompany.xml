@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="kr.or.ddit.autumn.commons.login.dao.LoginSelectCompanyDAO">
+
+<select id="companyCheck" resultType="CompanyVO">
+	SELECT	
+		COM_CODE
+	   ,COM_CNM		
+	FROM COMPANY
+</select>	
+
+<select id="companyCompare" resultType="EmployeeVO" parameterType="EmployeeVO">
+	SELECT * FROM EMPLOYEE
+	WHERE COM_CODE = #{comCode}
+	AND EMP_ID = #{empId}
+</select>	
+	
+</mapper>

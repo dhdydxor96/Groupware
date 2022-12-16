@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.calendar.dao.CalendarDAO"><!-- namespace에는 inface가 필요 -->
+
+	<resultMap type="CalendarVO" id="CalendarMap" autoMapping="true">
+		<id property="calNo" column="CAL_NO"/>
+	  		<collection property="departmentList" ofType="DepartmentVO" autoMapping="true">
+				<id property="depId" column="DEP_ID"/>
+			</collection>
+	</resultMap>
+
+	<select id="selectCalendar" resultType="CalendarVO" parameterType="Integer">
+			
+	SELECT *
+		FROM CALENDAR 
+		WHERE CAL_NO = #{calNo,jdbcType=INTEGER}
+	</select>
+	
+	<select id="selectCalendarList"   resultType="CalendarVO">
+		SELECT *
+		FROM CALENDAR                        
+		
+	</select>
+	
+	<select id="selectDepCalendarList" parameterType="CalendarVO"  resultMap="CalendarMap">
+	
+
+		SELECT *
+		FROM CALENDAR 
+		                      
+		WHERE CAL_STA = '0'
+		
+		AND DEP_ID = #{depId,jdbcType=VARCHAR}
+		
+		
+<!-- 		SELECT * -->
+<!-- 		FROM CALENDAR C INNER JOIN DEPARTMENT D -->
+<!-- 		ON(C.DEP_ID = D.DEP_ID)                        -->
+<!-- 		WHERE C.CAL_STA = '0' -->
+<!-- 		<if test="departmentList neq null"> -->
+<!-- 		<foreach collection="departmentList" item="department"> -->
+<!-- 		AND D.DEP_ID = #{department.depId,jdbcType=VARCHAR} -->
+<!-- 		</foreach> -->
+<!-- 		</if> -->
+	</select>
+	
+	<select id="selectEmpCalendarList" parameterType="EmployeeVO"  resultType="CalendarVO">
+		SELECT *
+		FROM CALENDAR                       
+		WHERE EMP_ID = #{empId,jdbcType=VARCHAR}
+		AND DEP_ID = #{depId,jdbcType=VARCHAR}
+		AND CAL_STA = '1'
+	</select>
+
+
+	<insert id="insertCalendar" parameterType="CalendarVO">
+	<selectKey resultType="int" keyProperty="calNo" order="BEFORE">
+	SELECT NVL(MAX(CAL_NO), 0) + 1 FROM CALENDAR
+	</selectKey>
+		INSERT INTO CALENDAR (         
+			 CAL_NO       
+			,DEP_ID       
+			,EMP_ID       
+			,CAL_TIT      
+			,CAL_CON      
+			,CAL_START    
+			,CAL_END      
+			,CAL_STA      
+			,CAL_COLOR    
+			,CAL_ALLDAY   
+			 ) VALUES (               
+					  #{calNo     ,jdbcType=INTEGER}    
+					, #{depId     ,jdbcType=VARCHAR}
+					, #{empId     ,jdbcType=VARCHAR}
+					, #{calTit    ,jdbcType=VARCHAR}
+					, #{calCon    ,jdbcType=VARCHAR}
+					, #{calStart  ,jdbcType=VARCHAR}
+					, #{calEnd    ,jdbcType=VARCHAR}
+					, #{calSta    ,jdbcType=VARCHAR}
+					, #{calColor  ,jdbcType=VARCHAR}
+					, #{calAllday ,jdbcType=INTEGER}
+			)						 
+	</insert>
+	
+	<update id="updateCalendar" parameterType="CalendarVO">
+	 UPDATE CALENDAR                  
+	     SET                        
+			 DEP_ID      =  #{depId     ,jdbcType=VARCHAR}    
+			,EMP_ID      =  #{empId     ,jdbcType=VARCHAR}    
+			,CAL_TIT     =  #{calTit    ,jdbcType=VARCHAR}       
+			,CAL_CON     =  #{calCon    ,jdbcType=VARCHAR}       
+			,CAL_START   =  #{calStart  ,jdbcType=VARCHAR}    
+			,CAL_END     =  #{calEnd    ,jdbcType=VARCHAR}    
+			,CAL_STA     =  #{calSta    ,jdbcType=VARCHAR}    
+			,CAL_COLOR   =  #{calColor  ,jdbcType=VARCHAR}    
+		    ,CAL_ALLDAY  =   #{calAllday ,jdbcType=INTEGER}   
+		    
+		 WHERE  CAL_NO =  #{calNo     ,jdbcType=INTEGER}                
+	</update>
+	
+	
+	<delete id="deleteCalendar" parameterType="Integer">
+	    DELETE FROM CALENDAR
+		WHERE
+		CAL_NO = #{calNo,jdbcType=INTEGER}
+	</delete>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

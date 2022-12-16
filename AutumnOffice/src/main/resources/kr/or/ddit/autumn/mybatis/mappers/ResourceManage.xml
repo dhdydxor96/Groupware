@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="kr.or.ddit.autumn.management.menu.dao.ResourceManageDAO">
+
+	<!-- 회의실 조회 -->
+	<select id="selectMeetRoomList" parameterType="MeetRoomVO" resultType="MeetRoomVO">
+		SELECT MEET_NO, COM_CODE, MEET_NM, TO_CHAR(MEET_IND, 'YYYY-MM-DD') MEET_IND , TO_CHAR(MEET_UPD,'YYYY-MM-DD') MEET_UPD , RNUM
+			FROM (
+				SELECT A.*, ROWNUM RNUM
+				FROM(
+					SELECT *
+					FROM MEET_ROOM      
+					ORDER BY MEET_IND DESC
+				) A
+			) B
+			<![CDATA[
+			WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+			AND COM_CODE = #{comCode}
+		]]>
+	</select>
+	
+	<select id="selectTotalCount" parameterType="PagingVO" resultType="int">
+		SELECT COUNT(*)
+		FROM MEET_ROOM
+		WHERE COM_CODE = #{comCode}
+	</select>
+
+	<select id="selectMeetRoomNo" parameterType="kr.or.ddit.autumn.groupware.resource.vo.ResourceInfoVO" resultType="int">
+		SELECT MEET_NO
+		FROM MEET_ROOM
+		WHERE COM_CODE = #{comCode}
+		AND MEET_NM = #{meetNm}
+	</select>
+
+	<insert id="insertMeetRoom" parameterType="MeetRoomVO">
+		INSERT INTO MEET_ROOM
+		VALUES( MEET_ROOM_SEQ.NEXTVAL, #{comCode}, #{meetNm} , SYSDATE, SYSDATE )
+	</insert>
+	
+	
+	<update id="updateMeetRoom" parameterType="MeetRoomVO">
+		UPDATE MEET_ROOM
+		SET MEET_NM = #{meetNm},
+		MEET_UPD = SYSDATE
+		WHERE MEET_NO = #{meetNo}
+	</update>
+	
+	<delete id="deleteMeetRoom" parameterType="int">
+		DELETE
+		FROM MEET_ROOM
+		WHERE MEET_NO = #{meetNo}
+	</delete>
+	
+	<select id="selectMeetReser" resultType="int" parameterType="int">
+		SELECT COUNT(*)
+		FROM MEET_RESER
+		WHERE MEET_NO = #{meetNo}
+	</select>
+
+	<delete id="deleteMeetReser" parameterType="int">
+		DELETE
+		FROM MEET_RESER
+		WHERE MEET_NO = #{meetNo}
+	</delete>
+
+	<!-- 회의실 상세정보 -->
+	<resultMap type="kr.or.ddit.autumn.groupware.resource.vo.ResourceInfoVO" id="meetInfoMap" autoMapping="true">
+		<id property="meetNo" column="MEET_NO" />
+		<association property="meetRoom" autoMapping="true"></association>
+	</resultMap>
+	
+	<select id="selectMeetInfo" parameterType="int" resultMap="meetInfoMap">
+		SELECT A.MEET_NO, MEI_PER, MEI_BEAM, MEI_BOD, MEI_PLA, MEI_ITEM, MEI_SCR, COM_CODE, MEET_NM, TO_CHAR(MEET_IND, 'YYYY-MM-DD') MEET_IND, TO_CHAR(MEET_UPD,'YYYY-MM-DD') MEET_UPD
+		FROM MEET_INFO A LEFT OUTER JOIN MEET_ROOM B
+		ON A.MEET_NO = B.MEET_NO
+		WHERE A.MEET_NO = #{meetNo}
+	</select>
+	
+	<insert id="insertMeetInfo" parameterType="MeetInfoVO">
+		INSERT INTO MEET_INFO
+		VALUES( #{meetNo}, #{meiPer} , #{meiBeam}, #{meiBod}, #{meiPla}, #{meiItem} , #{meiScr}  )
+	</insert>
+
+	<update id="updateMeetInfo" parameterType="MeetInfoVO">
+		UPDATE MEET_INFO
+		SET MEI_PER = #{meiPer}
+		,	MEI_BEAM = #{meiBeam}
+		,	MEI_BOD = #{meiBod}
+		, 	MEI_PLA = #{meiPla}
+		, 	MEI_ITEM = #{meiItem}
+		, 	MEI_SCR =  #{meiScr} 
+		WHERE MEET_NO = #{meetNo}
+	</update>
+	
+	<delete id="deleteMeetInfo" parameterType="int">
+		DELETE FROM MEET_INFO
+		WHERE MEET_NO = #{meetNo}
+	</delete>
+	
+	<!-- 회의실 첨부파일 -->
+	<insert id="insertMeetRoomImage" parameterType="AttatchVO">
+		<selectKey resultType="int" keyProperty="attNo"
+			order="BEFORE">
+			SELECT NVL(MAX(ATT_NO),0)+1
+			FROM ATTATCH
+		</selectKey>
+
+		INSERT INTO ATTATCH
+		(
+		ATT_NO
+		, MEET_NO
+		, ATT_FNM
+		, ATT_SNM
+		, ATT_MIME
+		, ATT_FIS
+		, ATT_FAS
+		)
+		VALUES
+		(
+		#{attNo}
+		, #{meetNo, jdbcType=NUMERIC}
+		, #{attFnm, jdbcType=VARCHAR}
+		, #{attSnm, jdbcType=VARCHAR}
+		, #{attMime, jdbcType=VARCHAR}
+		, #{attFis, jdbcType=NUMERIC}
+		, #{attFas, jdbcType=VARCHAR}
+		)
+
+	</insert>
+	
+	<select id="selectMeetRoomImage" parameterType="int" resultType="AttatchVO">
+		SELECT *
+		FROM ATTATCH
+		WHERE MEET_NO = #{meetNo}
+	</select>
+	
+	<delete id="deleteMeetRoomImage" parameterType="int" >
+		DELETE
+		FROM ATTATCH
+		WHERE MEET_NO = #{meetNo}
+	</delete>
+	
+</mapper>

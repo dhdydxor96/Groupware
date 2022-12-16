@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.survey.dao.SurveyArticleDAO">
+	<resultMap type="SurveyArticleVO" id="surveyArticleMap" autoMapping="true">
+		<id property="surarcNo" column="SURARC_NO"/>
+		<association property="surveyQuestion" javaType="SurveyQuestionVO" autoMapping="true"/>
+	</resultMap>
+	
+	<sql id="searchFrag">
+		WHERE COM_CODE = #{comCode}
+		<trim prefix="AND (" suffix=")">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(SURARC_CONTENT, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'writer' eq simpleCondition.searchType">
+						INSTR(SURQUE_CONTENT, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(SURARC_CONTENT, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(SURQUE_CONTENT, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<select id="selectTotalRecord" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+		FROM SUR_ARC A LEFT OUTER JOIN SUR_QUE B
+		ON A.SURQUE_NO = B.SURQUE_NO
+        LEFT OUTER JOIN SURVEY C
+        ON B.SUR_NO = C.SUR_NO
+        LEFT OUTER JOIN EMPLOYEE D
+        ON C.EMP_ID = D.EMP_ID
+		<include refid="searchFrag"/>
+	</select>
+	
+	<select id="selectSurveyArticleList" resultMap="surveyArticleMap" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT
+					
+						A.SURARC_NO
+					,	A.SURARC_TURN
+					,	A.SURARC_CONTENT
+					,	TO_CHAR(A.SURARC_INSDAT, 'YYYY-MM-DD') SURARC_INSDAT
+					,	B.SURQUE_NO
+					,	B.SURQUE_TURN
+					,	B.SURQUE_TYPE
+					,	B.SURQUE_CONTENT
+					,	TO_CHAR(B.SURQUE_INSDAT, 'YYYY-MM-DD') SURQUE_INSDAT
+					,	C.SUR_NO
+					,	C.SUR_TITLE
+					,	C.SUR_PURPOSE
+					,	C.SUR_GUIDE
+					,	TO_CHAR(C.SUR_SDATE, 'YYYY-MM-DD') SUR_SDATE
+					,	TO_CHAR(C.SUR_EDATE, 'YYYY-MM-DD') SUR_EDATE
+					,	C.SUR_STATE
+					,	TO_CHAR(C.SUR_INSDAT, 'YYYY-MM-DD') SUR_INSDAT
+					,	D.EMP_PASS
+					,	D.EMP_NM
+					,	D.EMP_BID
+					,	D.EMP_MAIL
+					,	D.EMP_PH
+					,	D.EMP_ADDR
+					,	D.EMP_HID
+					,	D.EMP_END
+				FROM SUR_ARC A LEFT OUTER JOIN SUR_QUE B
+				ON A.SURQUE_NO = B.SURQUE_NO
+		        LEFT OUTER JOIN SURVEY C
+		        ON B.SUR_NO = C.SUR_NO
+		        LEFT OUTER JOIN EMPLOYEE D
+		        ON C.EMP_ID = D.EMP_ID
+				<include refid="searchFrag"/>
+				ORDER BY A.SURQUE_NO DESC, A.SURARC_TURN ASC, A.SURARC_INSDAT DESC
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectSurveyArticle" parameterType="int" resultType="SurveyArticleVO">
+		SELECT
+				A.SURARC_NO
+			,	A.SURARC_TURN
+			,	A.SURARC_CONTENT
+			,	TO_CHAR(A.SURARC_INSDAT, 'YYYY-MM-DD') SURARC_INSDAT
+			,	B.SURQUE_NO
+			,	B.SURQUE_TURN
+			,	B.SURQUE_TYPE
+			,	B.SURQUE_CONTENT
+			,	TO_CHAR(B.SURQUE_INSDAT, 'YYYY-MM-DD') SURQUE_INSDAT
+        FROM SUR_ARC A LEFT OUTER JOIN SUR_QUE B
+		ON A.SURQUE_NO = B.SURQUE_NO
+        WHERE SURARC_NO = #{surarcNo}
+	</select>
+	
+	<insert id="insertSurveyArticle" parameterType="SurveyArticleVO">
+		INSERT INTO SUR_ARC
+		(
+			SURARC_NO
+			,	SURQUE_NO
+			,	SURARC_TURN
+			,	SURARC_CONTENT
+			,	SURARC_INSDAT
+		)VALUES(
+				SURARC_SEQ.nextval
+			,	#{surqueNo, jdbcType=NUMERIC}
+			,	#{surarcTurn, jdbcType=NUMERIC}
+			,	#{surarcContent, jdbcType=VARCHAR}
+			,	SYSDATE
+		)
+	</insert>
+	
+	<update id="updateSurveyArticle" parameterType="SurveyArticleVO">
+		UPDATE SUR_ARC
+		SET
+			SURARC_TURN = #{surarcTurn, jdbcType=NUMERIC}
+			,	SURARC_CONTENT = #{surarcContent, jdbcType=VARCHAR}
+		WHERE SURARC_NO = #{surarcNo}
+	</update>
+	
+	<delete id="deleteSurveyArticle" parameterType="SurveyArticleVO">
+		DELETE FROM SUR_ARC
+		WHERE SURARC_NO = #{surarcNo}
+	</delete>
+	
+	<select id="selectSurveyQuestionList" parameterType="PagingVO" resultMap="surveyArticleMap">
+		SELECT * 
+		FROM SUR_QUE
+	</select>
+	
+	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

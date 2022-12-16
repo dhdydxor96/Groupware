@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.management.base.dao.LogoManageDAO">
+
+	<!-- 프로필 관리 -->
+	<insert id="insertLogoImage" parameterType="AttatchVO">
+		<selectKey resultType="int" keyProperty="attNo"
+			order="BEFORE">
+			SELECT NVL(MAX(ATT_NO),0)+1
+			FROM ATTATCH
+		</selectKey>
+
+		INSERT INTO ATTATCH
+		(
+		ATT_NO
+		, COM_CODE
+		, ATT_FNM
+		, ATT_SNM
+		, ATT_MIME
+		, ATT_FIS
+		, ATT_FAS
+		)
+		VALUES
+		(
+		#{attNo}
+		, #{comCode, jdbcType=VARCHAR}
+		, #{attFnm, jdbcType=VARCHAR}
+		, #{attSnm, jdbcType=VARCHAR}
+		, #{attMime, jdbcType=VARCHAR}
+		, #{attFis, jdbcType=NUMERIC}
+		, #{attFas, jdbcType=VARCHAR}
+		)
+
+	</insert>
+
+	<delete id="deleteLogoImage" parameterType="String">
+		DELETE FROM
+		ATTATCH
+		WHERE COM_CODE = #{comCode}
+	</delete>
+
+	<select id="selectCompanyAttatchInfo" parameterType="String"
+		resultType="AttatchVO">
+		SELECT
+		ATT_NO, ATT_FNM, ATT_SNM, ATT_MIME, ATT_FIS, ATT_FAS
+		FROM ATTATCH
+		WHERE COM_CODE = #{comCode}
+	</select>
+</mapper>

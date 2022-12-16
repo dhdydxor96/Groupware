@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.survey.dao.SurveyResponseDAO">
+	<resultMap type="SurveyResponseVO" id="surveyResponseMap" autoMapping="true">
+		<id property="surresNo" column="SURRES_NO"/>
+		<association property="survey" javaType="SurveyVO" autoMapping="true"/>
+		<association property="surveyQuestion" javaType="SurveyQuestionVO" autoMapping="true"/>
+		<association property="surveyArticle" javaType="SurveyArticleVO" autoMapping="true"/>
+		<association property="surveyInvestigation" javaType="SurveyInvestigationVO" autoMapping="true"/>
+	</resultMap>
+	
+	<sql id="searchFrag">
+		WHERE COM_CODE = #{comCode} AND SUR_STATE = 1 AND A.SURINV_NO = #{surinvNo}
+		
+		<trim prefix="AND (" suffix=")">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'writer' eq simpleCondition.searchType">
+						INSTR(SURRES_ESSAY, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(SURRES_ESSAY, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<sql id="searchDeadlineFrag">
+		WHERE COM_CODE = #{comCode} AND SUR_STATE = 2 AND A.SURINV_NO = #{surinvNo}
+		<trim prefix="AND (" suffix=")">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'writer' eq simpleCondition.searchType">
+						INSTR(SURRES_ESSAY, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(SURRES_ESSAY, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<select id="selectTotalRecord" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+		FROM SUR_RES A LEFT OUTER JOIN EMPLOYEE B
+		ON A.EMP_ID = B.EMP_ID
+		LEFT OUTER JOIN SUR_INV C
+		ON A.SURINV_NO = C.SURINV_NO
+		LEFT OUTER JOIN SURVEY D
+		ON C.SUR_NO = D.SUR_NO
+		<include refid="searchFrag"/>
+	</select>
+	
+	<select id="selectSurveyResponseList" resultMap="surveyResponseMap" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT *
+		        FROM SUR_RES A LEFT OUTER JOIN EMPLOYEE B
+				ON A.EMP_ID = B.EMP_ID
+				LEFT OUTER JOIN SUR_INV C
+				ON A.SURINV_NO = C.SURINV_NO
+				LEFT OUTER JOIN SURVEY D
+				ON C.SUR_NO = D.SUR_NO
+				<include refid="searchFrag"/>
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectSurveyDeadlineResponseList" resultType="SurveyResponseVO" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT *
+		        FROM SUR_RES A LEFT OUTER JOIN EMPLOYEE B
+				ON A.EMP_ID = B.EMP_ID
+				LEFT OUTER JOIN SUR_INV C
+				ON A.SURINV_NO = C.SURINV_NO
+				LEFT OUTER JOIN SURVEY D
+				ON C.SUR_NO = D.SUR_NO
+				<include refid="searchDeadlineFrag"/>
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<insert id="insertSurveyResponse" parameterType="SurveyResponseVO">
+		INSERT INTO SUR_RES
+		(
+				SURRES_NO
+			,	SURINV_NO
+			,	EMP_ID
+			,	SURRES_CHOFIRST
+			,	SURRES_CHOSECOND
+			,	SURRES_CHOTHIRD
+			,	SURRES_CHOFOUR
+			,	SURRES_CHOFIVE
+			,	SURRES_ESSAY
+			,	SURRES_INSDAT
+		)VALUES(
+				SURRES_SEQ.nextval
+			,	#{surinvNo, jdbcType=NUMERIC}
+			,	#{empId, jdbcType=VARCHAR}
+			,	#{surresChofirst, jdbcType=NUMERIC}	
+			,	#{surresChosecond, jdbcType=NUMERIC}	
+			,	#{surresChothird, jdbcType=NUMERIC}	
+			,	#{surresChofour, jdbcType=NUMERIC}	
+			,	#{surresChofive, jdbcType=NUMERIC}	
+			,	#{surresEssay, jdbcType=VARCHAR}	
+			,	SYSDATE
+		)
+	</insert>
+	
+	<select id="idCheck" parameterType="SurveyResponseVO" resultType="int">
+		<![CDATA[
+		SELECT COUNT(*) FROM SUR_RES WHERE EMP_ID = #{empId} AND SURINV_NO = #{surinvNo}
+		]]>
+	</select>
+	
+	<select id="selectSurveyResponse" parameterType="int" resultType="SurveyResponseVO">
+		SELECT DISTINCT 
+			SURINV_FIRST
+			, SURINV_SECOND
+			, SURINV_THIRD
+			, SURINV_FOUR
+			, SURINV_FIVE
+			, C.SUR_TITLE
+			, C.SUR_PURPOSE
+			, C.SUR_GUIDE
+			, TO_CHAR(C.SUR_SDATE, 'YYYY-MM-DD') SUR_SDATE
+			, TO_CHAR(C.SUR_EDATE, 'YYYY-MM-DD') SUR_EDATE
+		    ,	(SELECT COUNT(SURRES_CHOFIRST) FROM SUR_RES A LEFT OUTER JOIN SUR_INV B ON A.SURINV_NO = B.SURINV_NO WHERE A.SURINV_NO = #{surinvNo}) SURRES_CHOFIRST
+		    ,	(SELECT COUNT(SURRES_CHOSECOND) FROM SUR_RES A LEFT OUTER JOIN SUR_INV B ON A.SURINV_NO = B.SURINV_NO WHERE A.SURINV_NO = #{surinvNo}) SURRES_CHOSECOND
+		    ,	(SELECT COUNT(SURRES_CHOTHIRD) FROM SUR_RES A LEFT OUTER JOIN SUR_INV B ON A.SURINV_NO = B.SURINV_NO WHERE A.SURINV_NO = #{surinvNo}) SURRES_CHOTHIRD
+		    ,	(SELECT COUNT(SURRES_CHOFOUR) FROM SUR_RES A LEFT OUTER JOIN SUR_INV B ON A.SURINV_NO = B.SURINV_NO WHERE A.SURINV_NO = #{surinvNo}) SURRES_CHOFOUR
+		    ,	(SELECT COUNT(SURRES_CHOFIVE) FROM SUR_RES A LEFT OUTER JOIN SUR_INV B ON A.SURINV_NO = B.SURINV_NO WHERE A.SURINV_NO = #{surinvNo}) SURRES_CHOFIVE
+		FROM SUR_RES A LEFT OUTER JOIN SUR_INV B
+		ON A.SURINV_NO = B.SURINV_NO
+		LEFT OUTER JOIN SURVEY C
+		ON B.SUR_NO = C.SUR_NO
+		WHERE A.SURINV_NO = #{surinvNo}
+	</select>
+	
+	<select id="selectSurveyList" resultMap="surveyResponseMap">
+		SELECT 
+			SUR_TITLE
+		,	SUR_PURPOSE
+		,	SUR_GUIDE
+		,	TO_CHAR(SUR_SDATE, 'YYYY-MM-DD') SUR_SDATE
+		,	TO_CHAR(SUR_EDATE, 'YYYY-MM-DD') SUR_EDATE
+		FROM SURVEY
+	</select>
+	
+	<select id="selectSurveyQuestionList" resultMap="surveyResponseMap">
+		SELECT * 
+		FROM SUR_QUE
+		WHERE SUR_NO = #{surNo}
+	</select>
+	
+	<select id="selectSurveyInvestigationList" resultMap="surveyResponseMap">
+		SELECT 
+			B.SUR_TITLE
+		,	B.SUR_PURPOSE
+		,	B.SUR_GUIDE
+		,	TO_CHAR(B.SUR_SDATE, 'YYYY-MM-DD') SUR_SDATE
+		,	TO_CHAR(B.SUR_EDATE, 'YYYY-MM-DD') SUR_EDATE
+		FROM SUR_INV A LEFT OUTER JOIN SURVEY B
+		ON A.SUR_NO = B.SUR_NO
+		WHERE SURINV_NO = #{surinvNo}
+	</select>
+	
+	<select id="selectSurveyArticleList" resultMap="surveyResponseMap">
+		SELECT * 
+		FROM SUR_ARC
+		WHERE SURQUE_NO = #{surqueNo}
+	</select>
+</mapper>

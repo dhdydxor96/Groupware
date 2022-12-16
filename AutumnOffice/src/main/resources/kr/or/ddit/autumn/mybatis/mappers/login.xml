@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.commons.login.dao.LoginDAO">
+
+	<resultMap type="kr.or.ddit.autumn.vo.EmployeeVO" id="employeeMap" autoMapping="true">
+		<id property="empId" column="EMP_ID"/>
+		<result property="comCnm" column="COM_CNM"/>
+		<association property="empPfile" javaType="kr.or.ddit.autumn.vo.EmpPfileVO" autoMapping="true">
+			<id property="epfNo" column="EPF_NO"/>
+		</association>
+		<association property="attatch" javaType="kr.or.ddit.autumn.vo.AttatchVO" autoMapping="true">
+			<id property="attNo" column="ATT_NO"/>
+		</association>
+		<association property="department" javaType="kr.or.ddit.autumn.vo.DepartmentVO" autoMapping="true">
+			<id property="depId" column="DEP_ID"/>
+		</association>
+		<association property="job" javaType="kr.or.ddit.autumn.vo.JobVO" autoMapping="true">
+			<id property="jobId" column="JOB_ID"/>
+		</association>
+		<collection property="empRoles" ofType="string">
+			<result column="POW_ROLE"/>
+		</collection>
+	</resultMap>
+
+	<select id="findByPk" parameterType="string" resultMap="employeeMap">
+		SELECT 
+		    EMP.EMP_ID
+		    , EMP.COM_CODE
+		    , EMP.DEP_ID
+		    , EMP.JOB_ID
+		    , EMP.EMP_PASS
+		    , EMP.EMP_NM
+		    , EMP.EMP_BID
+		    , EMP.EMP_MAIL
+		    , EMP.EMP_PH
+		    , EMP.EMP_ADDR
+		    , EMP.EMP_SIGN
+		    , EMP.EMP_MPASS
+		    , EMP_STA
+		    , POW.POW_ROLE
+		    , ATT.ATT_NO
+		    , ATT.ATT_FNM
+		    , ATT.ATT_SNM
+		    , DEPT.DEP_ID
+		    , DEPT.DEP_HDC
+		    , DEPT.DEP_TNM
+		    , DEPT.DEP_NM
+		    , DEPT.DEP_MAG
+		    , J.JOB_ID
+		    , J.JOB_NM
+		    , COM.COM_CNM
+		FROM 
+		    EMPLOYEE EMP LEFT OUTER JOIN POWER POW ON (EMP.EMP_ID = POW.EMP_ID)  
+		                LEFT OUTER JOIN ATTATCH ATT ON (EMP.EMP_ID = ATT.EMP_ID)
+		                LEFT OUTER JOIN DEPARTMENT DEPT ON (EMP.DEP_ID = DEPT.DEP_ID)
+		                LEFT OUTER JOIN JOB J ON (EMP.JOB_ID = J.JOB_ID)
+		                INNER JOIN COMPANY COM ON (EMP.COM_CODE = COM.COM_CODE)
+		WHERE EMP.EMP_ID = #{username}
+	</select>
+	
+	<select id="findByComPk" parameterType="string" resultType="kr.or.ddit.autumn.vo.CompanyVO">
+		SELECT
+		    COM_CODE,
+		    COM_ID,
+		    COM_PASS,
+		    COM_NM,
+		    COM_PH,
+		    COM_MAIL,
+		    COM_CNM,
+		    COM_CEO,
+		    COM_TEL,
+		    COM_ADDR,
+		    COM_DIV
+		FROM
+		    COMPANY
+		WHERE COM_ID = #{username}
+	</select>
+	
+</mapper>

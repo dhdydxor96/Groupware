@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.management.wareservice.dao.UserInfoHistoryDAO">
+	
+	<sql id="searchFrag">
+		<trim prefix="AND" >
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						(
+						INSTR(SER_STD, #{simpleCondition.searchWord}) > 0
+						OR INSTR(SER_END, #{simpleCondition.searchWord}) > 0
+						)
+					</when>
+					<otherwise>
+						(
+						INSTR(SER_STD, #{simpleCondition.searchWord}) > 0
+						OR INSTR(SER_STD, #{simpleCondition.searchWord}) > 0						
+						)
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<select id="infoTotalRecode" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+		FROM SERVICE
+		WHERE COM_CODE = #{comCode}
+		<include refid="searchFrag"/>
+	</select>
+	
+	<select id="infoServiceList" resultType="ConsultingServiceVO" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT *
+				FROM SERVICE
+				WHERE COM_CODE = #{comCode}
+				<include refid="searchFrag"/>
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>	
+</mapper>

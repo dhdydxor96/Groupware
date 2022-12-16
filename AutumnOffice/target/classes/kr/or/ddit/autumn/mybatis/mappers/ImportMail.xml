@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.mail.dao.ImportMailDAO">
+
+
+	<sql id="searchFrag">
+		
+		 <trim prefix=" AND " > 
+		<if test="simpleCondition neq null and @org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+			<choose>
+				<when test="'title' eq simpleCondition.searchType">
+					INSTR(MAI_TITLE, #{simpleCondition.searchWord}) > 0	
+				</when>
+				<when test="'content' eq simpleCondition.searchType">
+					INSTR(MAI_CONTENT, #{simpleCondition.searchWord}) > 0	
+				</when>
+				<when test="'Address' eq simpleCondition.searchType">
+					INSTR(MAI_ADDRESS, #{simpleCondition.searchWord}) > 0	
+				</when>
+				<otherwise>
+					
+					INSTR(MAI_TITLE, #{simpleCondition.searchWord}) > 0
+					OR
+					INSTR(MAI_CONTENT, #{simpleCondition.searchWord}) > 0
+					OR
+					INSTR(MAI_ADDRESS, #{simpleCondition.searchWord}) > 0
+				</otherwise>
+			</choose>
+		</if>
+		</trim>
+	</sql>
+
+	
+	<select id="selectTotalRecord" resultType="int" parameterType="string">
+		SELECT COUNT(*)
+		FROM MAIL_IMPORT 
+		WHERE EMP_ID = #{empId,jdbcType=VARCHAR}
+		<include refid="searchFrag" />
+	</select>
+	
+	<select id="selectImportMailList" resultType="ImportMailVO" parameterType="PagingVO">
+	      SELECT *
+      FROM(
+         SELECT A.* , ROWNUM RNUM
+         FROM(
+            SELECT
+            	*
+            FROM
+                MAIL_IMPORT
+            WHERE EMP_ID =  #{empId,jdbcType=VARCHAR}
+            <include refid="searchFrag" />
+	       ORDER BY REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE
+	       (REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE
+	       (SUBSTR(MAI_DATE, 5, 12), 'Jan', '01' )
+	       ,'Feb','02'),'Mar','03'),'Apr','04'),'May','05')
+	       ,'Jun','06'),'Jul','07'),'Aug','08'),'Sep','09')
+	       ,'Oct','10'),'Nov','11'),'Dec','12') DESC
+         ) A
+      ) B
+      <![CDATA[
+      WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+      ]]>
+	
+	</select>
+	
+	<select id="noPageSelectImportMailList" resultType="ImportMailVO" parameterType="string">
+	  
+            SELECT
+            	*
+            FROM
+                MAIL_IMPORT
+            WHERE EMP_ID =  #{empId,jdbcType=VARCHAR}
+          
+	       ORDER BY REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE
+	       (REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE
+	       (SUBSTR(MAI_DATE, 5, 12), 'Jan', '01' )
+	       ,'Feb','02'),'Mar','03'),'Apr','04'),'May','05')
+	       ,'Jun','06'),'Jul','07'),'Aug','08'),'Sep','09')
+	       ,'Oct','10'),'Nov','11'),'Dec','12') DESC
+        
+    </select>
+	
+
+	<select id="selectImportMail" resultType="ImportMailVO"   parameterType="int">
+		
+		SELECT * 
+		FROM MAIL_IMPORT 
+		WHERE MAI_NO = #{maiNo,jdbcType=INTEGER}                    
+		
+	</select>
+
+		
+  	<insert id="insertImportMailVO" parameterType="ImportMailVO">
+		<selectKey resultType="int" keyProperty="maiNo" order="BEFORE">
+			SELECT NVL(MAX(MAI_NO), 0) + 1 FROM MAIL_IMPORT
+		</selectKey>
+		INSERT INTO MAIL_IMPORT
+		(
+			  MAI_NO
+			, EMP_ID
+			, MAI_TITLE
+			, MAI_CONTENT
+			, MAI_DATE
+			, MAI_ADDRESS
+		)VALUES
+		(
+			  #{maiNo,jdbcType=INTEGER}
+			, #{empId,jdbcType=VARCHAR}
+			, #{maiTitle,jdbcType=VARCHAR}
+			, #{maiContent,jdbcType=VARCHAR}
+			, #{maiDate,jdbcType=VARCHAR}
+			, #{maiAddress,jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	
+	 <delete id="deleteImportMailVO" parameterType="int">
+	      DELETE FROM MAIL_IMPORT 
+	      WHERE MAI_NO = #{maiNo,jdbcType=INTEGER}
+	 </delete>
+
+	
+	
+
+</mapper>

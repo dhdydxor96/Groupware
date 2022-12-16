@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.board.dao.NoticeDAO">
+	
+	<sql id="searchFrag">
+		<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+			<choose>
+				<when test="'title' eq simpleCondition.searchType">
+					AND	INSTR(NOC_TIT, #{simpleCondition.searchWord}) > 0
+				</when>
+				<when test="'content' eq simpleCondition.searchType">
+					AND INSTR(NOC_CON, #{simpleCondition.searchWord}) > 0
+				</when>
+				<when test="'date' eq simpleCondition.searchType">
+					AND INSTR(TO_CHAR(NOC_DATE, 'YYYY-MM-DD'), #{simpleCondition.searchWord}) > 0				
+				</when>
+				<otherwise>
+					AND (INSTR(NOC_TIT, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(NOC_CON, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(TO_CHAR(NOC_DATE, 'YYYY-MM-DD'), #{simpleCondition.searchWord}) > 0)
+				</otherwise>
+			</choose>
+		</if>
+	</sql>
+	
+	<resultMap type="NoticeVO" id="noticeListMap" autoMapping="true">
+		<id property="nocNo" column="NOC_NO" />	
+		<collection property="attatchList" ofType="AttatchVO" autoMapping="true" >
+			<id property="attNo" column="ATT_NO"/>
+		</collection>
+	</resultMap>
+	
+	<select id="selectNoticeList" resultMap="noticeListMap" parameterType="PagingVO">
+		SELECT *
+		FROM(
+		    SELECT A.*, ROWNUM RNUM	
+		    FROM(
+		        SELECT 
+	        			NOC_TIT
+		        	, TO_CHAR(NOC_DATE, 'YYYY-MM-DD') as NOC_DATE
+		        	, NOC_NO
+		        	, NOC_VIE
+		        	, NOC_CON
+		        FROM NOTICE
+		        WHERE COM_CODE = #{comCode}
+		         <include refid="searchFrag" />
+		        ORDER BY NOC_DATE DESC
+		    )A
+		)C  
+		 <![CDATA[
+			WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+			ORDER BY RNUM ASC
+		]]>
+	</select>
+	<select id="selectNotice" parameterType="int" resultMap="noticeListMap">
+		SELECT 
+				N.NOC_NO
+			, NOC_CON
+			, NVL(NOC_VIE, 0) AS NOC_VIE, NOC_TIT
+			, TO_CHAR(NOC_DATE, 'YYYY-MM-DD') as NOC_DATE
+			, ATT_NO, ATT_FNM, ATT_SNM, ATT_FAS
+		FROM NOTICE N LEFT OUTER JOIN ATTATCH A ON (N.NOC_NO = A.NOC_NO)
+		WHERE N.NOC_NO = #{nocNo}
+	</select>
+	
+	<select id="selectTotalRecord" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+		FROM NOTICE 
+        WHERE COM_CODE = #{comCode}
+	</select>
+	
+	<update id="incrementNoHit" parameterType="int">
+		UPDATE NOTICE
+		SET
+		NOC_VIE = NOC_VIE + 1
+		WHERE NOC_NO = #{nocNo}
+	</update>
+</mapper>

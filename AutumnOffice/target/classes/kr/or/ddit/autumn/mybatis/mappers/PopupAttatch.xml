@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.management.base.dao.PopupAttatchDAO">
+		
+	<select id="selectpopupNo" parameterType="AttatchVO" resultType="java.lang.Integer">
+		SELECT 
+			  POPUP_NO
+		FROM POPUP
+		WHERE COM_CODE = #{comCode}
+	</select>	
+		
+	<insert id="insertAttatch" parameterType="PopUpVO">
+		<selectKey resultType="int" keyProperty="startNo" order="BEFORE">
+			SELECT NVL(MAX(ATT_NO),0)+1
+			FROM ATTATCH
+		</selectKey>
+		INSERT INTO ATTATCH
+		(
+				ATT_NO
+			,	POPUP_NO
+			,	ATT_FNM
+			,	ATT_SNM
+			,	ATT_MIME
+			,	ATT_FIS
+			,	ATT_FAS
+		)VALUES(
+			  #{startNo}
+			, #{popupNo, jdbcType=NUMERIC}
+			, #{attFnm, jdbcType=VARCHAR}
+			, #{attSnm, jdbcType=VARCHAR}
+			, #{attMime, jdbcType=VARCHAR}
+			, #{attFis, jdbcType=NUMERIC}
+			, #{attFas, jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<select id="retrieveAttatch" parameterType="AttatchVO" resultType="AttatchVO">
+		SELECT ATT_FNM, ATT_SNM, ATT_FIS, ATT_MIME
+		FROM ATTATCH
+		WHERE POPUP_NO = #{popupNo}
+	</select>
+	
+	<delete id="deletePopupAttatch" parameterType="PopUpVO">
+		DELETE
+		FROM ATTATCH
+		WHERE POPUP_NO = #{popupNo}
+	</delete>
+</mapper>

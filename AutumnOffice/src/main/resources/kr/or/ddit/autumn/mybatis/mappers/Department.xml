@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.management.group.department.dao.DepartmentDAO">
+	<resultMap type="DepartmentVO" id="departmentMap" autoMapping="true">
+		<id property="depId" column="DEP_ID"/>
+		<association property="department" javaType="DepartmentVO" autoMapping="true"/>
+		<association property="power" javaType="PowerVO" autoMapping="true"/>
+	</resultMap>
+	<sql id="searchFrag">
+		WHERE DEP_DST = 1 AND COM_CODE = #{comCode}
+		<trim prefix="AND (" suffix=")">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(DEP_ID, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'writer' eq simpleCondition.searchType">
+						INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'content' eq simpleCondition.searchType">
+						INSTR(DEP_MAG, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(DEP_ID, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(DEP_MAG, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<select id="selectTotalRecord" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+		FROM DEPARTMENT
+		<include refid="searchFrag"/>
+	</select>
+	
+	<select id="selectDepartmentList" resultType="DepartmentVO" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT
+					DEP_ID
+					, DEP_NM
+					, DEP_MAG
+					, TO_CHAR(DEP_CRD, 'YYYY-MM-DD') DEP_CRD
+				FROM DEPARTMENT
+				<include refid="searchFrag"/>
+				ORDER BY ROWID DESC
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectDepartment" parameterType="String" resultType="DepartmentVO">
+		SELECT
+				DEP_ID 
+			,	DEP_HDC
+			,	DEP_TNM
+			,	DEP_NM
+			,	DEP_MAG
+			,	DEP_DST
+			,	TO_CHAR(DEP_CRD, 'YYYY-MM-DD') DEP_CRD
+			,	TO_CHAR(DEP_UPD, 'YYYY-MM-DD') DEP_UPD
+		FROM
+			DEPARTMENT 
+		WHERE DEP_ID = #{depId} 
+	</select>
+	
+	<insert id="insertDepartment" parameterType="DepartmentVO">
+		INSERT INTO DEPARTMENT
+		(
+			DEP_ID 
+			,	DEP_HDC
+			,	DEP_TNM
+			,	DEP_NM
+			,	DEP_MAG
+			,	DEP_DST
+			,	DEP_CRD
+			,	DEP_UPD
+			,	COM_CODE
+		)VALUES(
+		
+			#{depId, jdbcType=VARCHAR}
+		,	#{depHdc, jdbcType=VARCHAR}
+		,	#{depTnm, jdbcType=VARCHAR}
+		,	#{depNm, jdbcType=VARCHAR}
+		,	#{depMag, jdbcType=VARCHAR}
+		,	'1'
+		,	SYSDATE
+		,	SYSDATE
+		,	#{comCode, jdbcType=VARCHAR}
+		)
+	</insert>
+	<update id="updateDepartment" parameterType="DepartmentVO">
+		UPDATE DEPARTMENT
+		SET
+			DEP_ID = #{depId, jdbcType=VARCHAR}
+		,	DEP_HDC = #{depHdc, jdbcType=VARCHAR}
+		,	DEP_TNM = #{depTnm, jdbcType=VARCHAR}
+		,	DEP_NM = #{depNm, jdbcType=VARCHAR}
+		,	DEP_MAG = #{depMag, jdbcType=VARCHAR}
+		,	DEP_UPD = SYSDATE
+		WHERE DEP_ID = #{depId}
+			
+	</update>
+	
+	<delete id="deleteDepartment" parameterType="DepartmentVO">
+		DELETE FROM DEPARTMENT
+		WHERE DEP_ID = #{depId}
+		
+	</delete>
+	
+	<select id="idCheck" parameterType="DepartmentVO" resultType="int">
+		<![CDATA[
+		SELECT COUNT(*) FROM DEPARTMENT WHERE DEP_ID = #{depId} AND COM_CODE = #{comCode}
+		]]>
+	</select>
+	
+	<select id="departmentList" resultMap="departmentMap">
+		SELECT * 
+		FROM DEPARTMENT
+		WHERE COM_CODE = #{comCode}
+	</select>
+	
+	<select id="selectHeadList" resultMap="departmentMap">
+		SELECT
+		A.EMP_ID, A.POW_ROLE, B.EMP_NM
+		FROM POWER A LEFT OUTER JOIN EMPLOYEE B
+		ON A.EMP_ID = B.EMP_ID
+		WHERE A.POW_ROLE = 'ROLE_HEAD'
+	</select>
+	
+	
+</mapper>

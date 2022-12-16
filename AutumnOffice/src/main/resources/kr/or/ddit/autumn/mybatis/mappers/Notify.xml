@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.commons.notify.dao.NotifyDAO"><!-- namespace에는 inface가 필요 -->
+
+
+
+   
+   <select id="selectNotify" resultType="NotifyVO" parameterType="Integer">
+      SELECT *
+      FROM NOTIFY 
+      WHERE NOT_NO = #{notNo,jdbcType=INTEGER}
+   </select>
+   
+   <select id="selectNotifyList"   resultType="NotifyVO" parameterType="string">
+      SELECT *
+      FROM NOTIFY
+      WHERE EMP_ID = #{empId,jdbcType=VARCHAR}
+      ORDER BY NOT_CRD DESC                       
+   </select>
+   
+
+   <insert id="insertNotify" parameterType="NotifyVO">
+   <selectKey resultType="int" keyProperty="notNo" order="BEFORE">
+   SELECT NVL(MAX(NOT_NO), 0) + 1 FROM NOTIFY
+   </selectKey>
+   
+      INSERT INTO NOTIFY (         
+          NOT_NO     
+         ,EMP_ID     
+         ,SENDEMP_ID 
+         ,NOT_NAME   
+         ,NOT_CRD    
+         ,NOT_CON    
+         ,NOT_TYPE   
+         ,NOT_YN  
+         ,NOT_URL   
+            
+          ) VALUES (               
+                 #{notNo,jdbcType=INTEGER}
+               , #{empId,jdbcType=VARCHAR}
+               , #{sendempId,jdbcType=VARCHAR}
+               , #{notName,jdbcType=VARCHAR}
+               , sysdate
+               , #{notCon,jdbcType=VARCHAR}
+               , #{notType,jdbcType=INTEGER}
+               , 0
+               , #{notUrl,jdbcType=VARCHAR}
+         )                   
+   </insert>
+   
+   <update id="updateNotify" parameterType="NotifyVO">
+        UPDATE NOTIFY                 
+        SET                        
+       NOT_YN = '1'   
+       WHERE  NOT_NO = #{notNo,jdbcType=INTEGER}                
+   </update>
+   
+   <update id="updateAllNotify" parameterType="string">
+   UPDATE NOTIFY
+   SET
+   NOT_YN = '1'
+   WHERE EMP_ID = #{empId,jdbcType=VARCHAR} 
+   </update>
+   
+   <delete id="deleteNotify" parameterType="Integer">
+       DELETE FROM NOTIFY
+      WHERE
+      NOT_NO = #{notNo,jdbcType=INTEGER}
+   </delete>
+   
+   <delete id="deleteAllNotify" parameterType="string">
+       DELETE FROM NOTIFY
+      WHERE
+      EMP_ID = #{empId,jdbcType=VARCHAR}
+   </delete>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.main.dao.GroupwareMainDAO">
+
+	<resultMap type="PostVO" id="postMap" autoMapping="true">
+		<id property="poNo" column="PO_NO" />
+		<association property="emp" javaType="EmployeeVO"  autoMapping="true"></association>
+		<collection property="boardList" ofType="BoardVO" autoMapping="true">
+			<id property="boCode" column="BO_CODE" />
+		</collection>
+	</resultMap>
+	<select id="selectCommunityList" parameterType="String" resultMap="postMap">
+		SELECT ROWNUM RNUM, D.*
+		FROM 
+		(
+		SELECT PO_NO, A.BO_CODE, EMP_NM, PO_TIT, PO_VIE, TO_CHAR(PO_CRD,'YYYY-MM-DD') PO_CRD, B.COM_CODE, BO_TYPE
+		FROM POST A LEFT OUTER JOIN BOARD B
+		ON A.BO_CODE = B.BO_CODE
+		LEFT OUTER JOIN EMPLOYEE C
+		ON A.EMP_ID = C.EMP_ID
+		WHERE B.COM_CODE = #{comCode}
+		ORDER BY PO_CRD DESC
+		) D
+		WHERE ROWNUM BETWEEN 1 AND 3
+	</select>
+
+	<select id="selectNoticeList" parameterType="String" resultType="NoticeVO">
+		SELECT ROWNUM RNUM, A.*
+		FROM
+		(
+		SELECT NOC_NO, COM_CODE, NOC_TIT, NOC_CON, TO_CHAR(NOC_DATE,'YYYY-MM-DD') NOC_DATE, NOC_VIE
+		FROM NOTICE 
+		WHERE COM_CODE = #{comCode}
+		ORDER BY NOC_DATE DESC
+		) A
+		WHERE ROWNUM BETWEEN 1 AND 3
+	</select>
+	
+	<select id="selectCalendarList" parameterType="EmployeeVO" resultType="CalendarVO">
+		SELECT ROWNUM RNUM, A.*
+		FROM(
+            SELECT CAL_NO, DEP_ID, EMP_ID, CAL_TIT, CAL_CON, TO_CHAR(TO_DATE(CAL_START,'YYYY-MM-DD HH24:MI'),'HH24:MI') CAL_START, TO_CHAR(TO_DATE(CAL_END,'YYYY-MM-DD HH24:MI'),'HH24:MI') CAL_END, CAL_STA, CAL_COLOR,CAL_ALLDAY
+            FROM CALENDAR
+            WHERE EMP_ID = #{empId}
+            AND CAL_STA = 1
+            AND TO_CHAR(SYSDATE,'YYYY-MM-DD') BETWEEN TO_CHAR(TO_DATE(CAL_START,'YYYY-MM-DD HH24:MI'),'YYYY-MM-DD') AND TO_CHAR(TO_DATE(CAL_END,'YYYY-MM-DD HH24:MI'),'YYYY-MM-DD')
+            UNION
+            SELECT CAL_NO, DEP_ID, EMP_ID, CAL_TIT, CAL_CON, TO_CHAR(TO_DATE(CAL_START,'YYYY-MM-DD HH24:MI'),'HH24:MI') CAL_START, TO_CHAR(TO_DATE(CAL_END,'YYYY-MM-DD HH24:MI'),'HH24:MI') CAL_END, CAL_STA, CAL_COLOR,CAL_ALLDAY
+            FROM CALENDAR
+            WHERE DEP_ID = #{depId}
+            AND CAL_STA = 0
+            AND TO_CHAR(SYSDATE,'YYYY-MM-DD') BETWEEN TO_CHAR(TO_DATE(CAL_START,'YYYY-MM-DD HH24:MI'),'YYYY-MM-DD') AND TO_CHAR(TO_DATE(CAL_END,'YYYY-MM-DD HH24:MI'),'YYYY-MM-DD')
+		) A
+		WHERE ROWNUM BETWEEN 1 AND 3
+	</select>
+	
+	<select id="selectMyWorkInfo" parameterType="String" resultType="kr.or.ddit.autumn.groupware.attendance.vo.StatusVO">
+		SELECT EMP_NM, JOB_NM, TO_CHAR(STA_IND,'YYYY-MM-DD') STA_IND, TO_CHAR(STA_ONT,'HH24:MI:SS') STA_ONT, TO_CHAR(STA_OFT,'HH24:MI:SS') STA_OFT, 
+		    CASE 
+		        WHEN STA_OFT IS NULL 
+		            THEN (
+		            SELECT EXTRACT(DAY    FROM SYSDATE-STA_ONT) *24*60*60
+		                + EXTRACT(HOUR   FROM SYSDATE-STA_ONT) *60*60
+		                + EXTRACT(MINUTE FROM SYSDATE-STA_ONT) *60
+		                + EXTRACT(SECOND FROM SYSDATE-STA_ONT) AS second
+		            FROM EMP_STATUS
+		            WHERE EMP_ID = #{empId}
+		            AND TO_CHAR(STA_IND,'YYYY-MM-DD') = TO_CHAR(SYSDATE, 'YYYY-MM-DD')
+		            ) 
+		        WHEN STA_OFT IS NOT NULL
+		            THEN (
+		            SELECT EXTRACT(DAY    FROM STA_OFT-STA_ONT) *24*60*60
+		                + EXTRACT(HOUR   FROM STA_OFT-STA_ONT) *60*60
+		                + EXTRACT(MINUTE FROM STA_OFT-STA_ONT) *60
+		                + EXTRACT(SECOND FROM STA_OFT-STA_ONT) AS second
+		            FROM EMP_STATUS
+		            WHERE EMP_ID = #{empId}
+		            AND TO_CHAR(STA_IND,'YYYY-MM-DD') = TO_CHAR(SYSDATE, 'YYYY-MM-DD')
+		            )
+		        WHEN STA_ONT IS NULL
+		            THEN 0
+		        END AS SUM_SECOND
+		FROM EMPLOYEE A LEFT OUTER JOIN JOB B
+		ON A.JOB_ID = B.JOB_ID
+		LEFT OUTER JOIN EMP_STATUS C
+		ON A.EMP_ID = C.EMP_ID
+		WHERE A.EMP_ID = #{empId}
+		AND TO_CHAR(STA_IND,'YYYY-MM-DD') = TO_CHAR(SYSDATE, 'YYYY-MM-DD')
+	</select>
+	
+	<select id="selectMyInfo" parameterType="String" resultType="AttatchVO">
+		SELECT ATT_NO, ATT_FNM, ATT_SNM, ATT_MIME, ATT_FIS, ATT_FAS, A.EMP_ID
+		FROM EMPLOYEE A LEFT OUTER JOIN ATTATCH B
+		ON A.EMP_ID = B.EMP_ID
+		WHERE A.EMP_ID = #{empID}
+	</select>
+	
+	<resultMap type="ElecAppVO" id="elecAppMap" autoMapping="true">
+		<id property="eleNo" column="ELE_NO"/>
+		<association property="appForm" javaType="kr.or.ddit.autumn.vo.AppFormVO" autoMapping="true">
+			<id property="apfNo" column="APF_NO"/>
+		</association>
+		<association property="appStatus" javaType="kr.or.ddit.autumn.vo.AppStatusVO" autoMapping="true">
+			<id property="eleNo" column="ELE_NO"/>		
+		</association>
+	</resultMap>
+	
+	<select id="selectMyApprovalList" parameterType="String" resultMap="elecAppMap">
+		SELECT B.*
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT 
+                    DISTINCT ELE.ELE_NO
+                    , ELE.APF_NO
+                    , ELE.APL_NO
+                    , ELE.EMP_ID
+                    , ELE.ELE_TIT
+                    , ELE.ELE_USE
+                    , ELE.ELE_CON
+                    , TO_CHAR(ELE.ELE_CRD, 'YYYY-MM-DD') AS ELE_CRD
+                    , ELE.ELE_DYN
+                    , ELE.ELE_YN
+                    , AFO.COM_CODE
+                    , AFO.APF_NM
+                    , AFO.APF_CAT
+                    , AFO.APF_FAYN
+                    , AST.APS_STATUS
+                    , AST.APS_DATE
+                    , AST.APS_RER
+                    , EMP.EMP_NM
+                FROM ELEC_APP ELE INNER JOIN APP_FORM AFO ON(ELE.APF_NO = AFO.APF_NO)
+                                INNER JOIN APP_STATUS AST ON(ELE.ELE_NO = AST.ELE_NO)
+                                INNER JOIN EMPLOYEE EMP ON (ELE.EMP_ID = EMP.EMP_ID)
+                                INNER JOIN APL_DETAIL APL ON (APL.APL_NO = ELE.APL_NO)
+                                LEFT OUTER JOIN ELE_REF RE ON (ELE.ELE_NO = RE.ELE_NO)
+	 	            WHERE APL.EMP_ID = #{empId}
+					AND APL.APL_TURN = 1
+					ORDER BY ELE.ELE_NO DESC
+					)A
+				)B
+		<![CDATA[
+		WHERE RNUM >= 1 AND RNUM <= 3
+		]]>
+	</select>
+	
+	<select id="selectMyPrivacyInfo" parameterType="String" resultType="kr.or.ddit.autumn.groupware.attendance.vo.AttendEmployeeVO">
+		SELECT EMP_ID, A.COM_CODE, DEP_NM, JOB_NM,EMP_PASS ,EMP_NM, TO_CHAR(EMP_BID,'YYYY-MM-DD') EMP_BID , EMP_MAIL, EMP_PH, EMP_ADDR, TO_CHAR(EMP_HID,'YYYY-MM-DD') EMP_HID, TO_CHAR(EMP_END,'YYYY-MM-DD') EMP_END, EMP_STA
+		FROM EMPLOYEE A LEFT OUTER JOIN DEPARTMENT B
+        ON A.DEP_ID = B.DEP_ID
+        LEFT OUTER JOIN JOB C
+        ON A.JOB_ID = C.JOB_ID
+		WHERE A.EMP_ID = #{empId}
+	</select>
+	
+	<select id="selectCompanyLogo" resultType="AttatchVO" parameterType="String">
+		SELECT *
+		FROM ATTATCH
+		WHERE COM_CODE = #{comCode}
+	</select>
+
+</mapper>

@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.survey.dao.SurveyQusetionDAO">
+	<resultMap type="SurveyQuestionVO" id="surveyQuestionMap" autoMapping="true">
+		<id property="surqueNo" column="SURQUE_NO"/>
+		<association property="survey" javaType="SurveyVO" autoMapping="true"/>
+	</resultMap>
+	
+	<sql id="searchFrag">
+		WHERE COM_CODE = #{comCode}
+		<trim prefix="AND (" suffix=")">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(SURQUE_CONTENT, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'writer' eq simpleCondition.searchType">
+						INSTR(SUR_TITLE, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(SURQUE_CONTENT, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(SUR_TITLE, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<select id="selectTotalRecord" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+		FROM SUR_QUE A LEFT OUTER JOIN SURVEY B
+		ON A.SUR_NO = B.SUR_NO
+		LEFT OUTER JOIN EMPLOYEE C
+        ON B.EMP_ID = C.EMP_ID
+		<include refid="searchFrag"/>
+	</select>
+	
+	<select id="selectSurveyQuestionList" resultMap="surveyQuestionMap" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT
+						A.SURQUE_NO
+					,	A.SURQUE_TURN
+					,	A.SURQUE_TYPE
+					,	A.SURQUE_CONTENT
+					,	TO_CHAR(A.SURQUE_INSDAT, 'YYYY-MM-DD') SURQUE_INSDAT
+					,	B.SUR_NO
+					,	B.SUR_TITLE
+					,	B.SUR_PURPOSE
+					,	B.SUR_GUIDE
+					,	TO_CHAR(B.SUR_SDATE, 'YYYY-MM-DD') SUR_SDATE
+					,	TO_CHAR(B.SUR_EDATE, 'YYYY-MM-DD') SUR_EDATE
+					,	B.SUR_STATE
+					,	TO_CHAR(B.SUR_INSDAT, 'YYYY-MM-DD') SUR_INSDAT
+					,	C.EMP_PASS
+					,	C.EMP_NM
+					,	C.EMP_BID
+					,	C.EMP_MAIL
+					,	C.EMP_PH
+					,	C.EMP_ADDR
+					,	C.EMP_HID
+					,	C.EMP_END
+				FROM SUR_QUE A LEFT OUTER JOIN SURVEY B
+				ON A.SUR_NO = B.SUR_NO
+				LEFT OUTER JOIN EMPLOYEE C
+                ON B.EMP_ID = C.EMP_ID
+				<include refid="searchFrag"/>
+				ORDER BY A.SURQUE_INSDAT DESC
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+		
+	<select id="selectSurveyQuestion" parameterType="int" resultType="SurveyQuestionVO">
+		SELECT
+				B.SURQUE_NO
+			,	B.SURQUE_TURN
+			,	B.SURQUE_TYPE
+			,	B.SURQUE_CONTENT
+			,	TO_CHAR(B.SURQUE_INSDAT, 'YYYY-MM-DD') SURQUE_INSDAT
+			,	A.SUR_NO
+			,	A.SUR_TITLE
+			,	A.SUR_PURPOSE
+			,	A.SUR_GUIDE
+			,	A.SUR_SDATE
+			,	A.SUR_EDATE
+			,	A.SUR_STATE
+			,	A.SUR_INSDAT
+        FROM SURVEY A LEFT OUTER JOIN SUR_QUE B
+        ON A.SUR_NO = B.SUR_NO
+        WHERE SURQUE_NO = #{surqueNo}
+	</select>
+	
+	<insert id="insertSurveyQuestion" parameterType="SurveyQuestionVO">
+		INSERT INTO SUR_QUE
+		(
+			SURQUE_NO
+			,	SUR_NO
+			,	SURQUE_TURN
+			,	SURQUE_TYPE
+			,	SURQUE_CONTENT
+			,	SURQUE_INSDAT
+		)VALUES(
+				SURQUE_SEQ.nextval
+			,	#{surNo, jdbcType=NUMERIC}
+			,	#{surqueTurn, jdbcType=NUMERIC}
+			,	#{surqueType, jdbcType=VARCHAR}
+			,	#{surqueContent, jdbcType=VARCHAR}
+			,	SYSDATE
+		)
+	</insert>
+	
+	<update id="updateSurveyQuestion" parameterType="SurveyQuestionVO">
+		UPDATE SUR_QUE
+		SET
+			SURQUE_TURN = #{surqueTurn, jdbcType=NUMERIC}
+			,	SURQUE_TYPE = #{surqueType, jdbcType=VARCHAR}
+			,	SURQUE_CONTENT = #{surqueContent, jdbcType=VARCHAR}
+		WHERE SURQUE_NO = #{surqueNo}
+	</update>
+	
+	<delete id="deleteSurveyQuestion" parameterType="SurveyQuestionVO">
+		DELETE FROM SUR_QUE
+		WHERE SURQUE_NO = #{surqueNo}
+	</delete>
+	
+	<select id="selectSurveyList" resultMap="surveyQuestionMap">
+		SELECT * 
+		FROM SURVEY
+	</select>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

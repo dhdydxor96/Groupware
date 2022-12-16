@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.mail.dao.SendMailDAO">
+<!-- 	게시글의 목록 조회: 페이징 + 검색(제목 - title, 작성자-writer, 내용-content, 전체) -->
+
+
+
+<!--    <sql id="searchFrag"> -->
+<!--       <trim prefix=" WHERE " prefixOverrides="AND"> -->
+<!--          <if test="simpleCondition neq null"> -->
+<!--             <if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.boTitle)"> -->
+<!--                AND   INSTR(BO_TITLE, #{simpleCondition.searchWord}) > 0 -->
+<!--             </if> -->
+<!--             <if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.boWriter)"> -->
+<!--                AND   INSTR(BO_WRITER, #{simpleCondition.boWriter}) > 0 -->
+<!--             </if> -->
+<!--             <if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.boContent)"> -->
+<!--                AND   INSTR(BO_CONTENT, #{simpleCondition.boContent}) > 0 -->
+<!--             </if> -->
+<!--          </if> -->
+<!--       </trim> -->
+<!--    </sql> -->
+
+	<resultMap type="SendMailVO" id="SendMailMap" autoMapping="true">
+		<id property="mailNo" column="MAIL_NO"/>
+	  		<collection property="attatchList" ofType="AttatchVO" autoMapping="true">
+				<id property="attNo" column="ATT_NO"/>
+			</collection>
+	</resultMap>
+
+	<sql id="searchFrag">
+		
+		 <trim prefix=" AND " > 
+		<if test="simpleCondition neq null and @org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+			<choose>
+				<when test="'title' eq simpleCondition.searchType">
+					INSTR(TITLE, #{simpleCondition.searchWord}) > 0	
+				</when>
+				<when test="'content' eq simpleCondition.searchType">
+					INSTR(CONTENT, #{simpleCondition.searchWord}) > 0	
+				</when>
+				<when test="'toAddress' eq simpleCondition.searchType">
+					INSTR(TOADDRESS, #{simpleCondition.searchWord}) > 0	
+				</when>
+				<otherwise>
+					
+					INSTR(TITLE, #{simpleCondition.searchWord}) > 0
+					OR
+					INSTR(CONTENT, #{simpleCondition.searchWord}) > 0
+					OR
+					INSTR(TOADDRESS, #{simpleCondition.searchWord}) > 0
+				</otherwise>
+			</choose>
+		</if>
+		</trim>
+	</sql>
+
+	
+	<select id="selectTotalRecord" resultType="int" parameterType="string">
+		SELECT COUNT(*)
+		FROM MAIL_SEND 
+		WHERE EMP_ID = #{empId,jdbcType=VARCHAR}
+		<include refid="searchFrag" />
+	</select>
+	
+	<select id="selectSendMailList" resultMap="SendMailMap" parameterType="PagingVO">
+	      SELECT *
+      FROM(
+         SELECT A.* , ROWNUM RNUM
+         FROM(
+            SELECT
+            	*
+            FROM
+                MAIL_SEND M LEFT OUTER JOIN ATTATCH A
+                   ON M.MAIL_NO = A.MAIL_NO
+            WHERE M.EMP_ID =  #{empId,jdbcType=VARCHAR}
+            <include refid="searchFrag" />
+            ORDER BY M.SENDDATE DESC
+         ) A
+      ) B
+      <![CDATA[
+      WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+      ]]>
+	
+	</select>
+	
+	
+	<select id="noPageSelectSendMailList" resultMap="SendMailMap" parameterType="string">
+	  
+            SELECT
+            	*
+            FROM
+                MAIL_SEND M LEFT OUTER JOIN ATTATCH A
+                   ON M.MAIL_NO = A.MAIL_NO
+            WHERE M.EMP_ID =  #{empId,jdbcType=VARCHAR}
+            ORDER BY M.SENDDATE DESC
+     
+	</select>
+	
+
+	<select id="selectSendMail" resultMap="SendMailMap"   parameterType="int">
+		
+		SELECT * 
+		FROM MAIL_SEND M LEFT OUTER JOIN ATTATCH A
+		ON( M.MAIL_NO = A.MAIL_NO )
+		WHERE M.MAIL_NO = #{mailNo,jdbcType=INTEGER}                    
+		
+	</select>
+
+		
+  	<insert id="insertSendMailVO" parameterType="SendMailVO">
+		<selectKey resultType="int" keyProperty="mailNo" order="BEFORE">
+			SELECT NVL(MAX(MAIL_NO), 0) + 1 FROM MAIL_SEND
+		</selectKey>
+		INSERT INTO MAIL_SEND
+		(
+			  MAIL_NO
+			, EMP_ID
+			, TITLE
+			, CONTENT
+			, SENDDATE
+			, TOADDRESS
+		)VALUES
+		(
+			  #{mailNo,jdbcType=INTEGER}
+			, #{empId,jdbcType=VARCHAR}
+			, #{title,jdbcType=VARCHAR}
+			, #{content,jdbcType=VARCHAR}
+			, SYSDATE
+			, #{toAddress,jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	
+	 <delete id="deleteSendMailVO" parameterType="int">
+	      DELETE FROM MAIL_SEND 
+	      WHERE MAIL_NO = #{mailNo,jdbcType=INTEGER}
+	 </delete>
+
+	
+	
+
+</mapper>

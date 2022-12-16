@@ -1,0 +1,303 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.management.group.employee.dao.ManagementEmployeeDAO">
+	<resultMap type="EmployeeVO" id="employeeMap" autoMapping="true">
+		<id property="empId" column="EMP_ID"/>
+		<association property="department" javaType="DepartmentVO" autoMapping="true"/>
+		<association property="job" javaType="JobVO" autoMapping="true"/>
+		<collection property="attatchList" ofType="AttatchVO" autoMapping="true">
+			<id property="attNo" column="ATT_NO"/>
+		</collection>
+	</resultMap>
+	
+	<sql id="searchFrag">
+		WHERE EMP_END IS NULL AND A.COM_CODE = #{comCode}
+		<trim prefix="AND (" suffix=")">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'writer' eq simpleCondition.searchType">
+						INSTR(JOB_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'content' eq simpleCondition.searchType">
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(JOB_NM, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<sql id="searchFragResignation">
+		WHERE EMP_END IS NOT NULL AND A.COM_CODE = #{comCode}
+		<trim prefix="AND (" suffix=")">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'writer' eq simpleCondition.searchType">
+						INSTR(JOB_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'content' eq simpleCondition.searchType">
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(JOB_NM, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<select id="selectTotalRecord" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+		FROM EMPLOYEE A LEFT OUTER JOIN DEPARTMENT B
+		ON A.DEP_ID = B.DEP_ID
+		LEFT OUTER JOIN JOB C
+		ON A.JOB_ID = C.JOB_ID
+		<include refid="searchFrag"/>
+	</select>
+	
+	<select id="selectRestignationTotalRecord" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+		FROM EMPLOYEE A LEFT OUTER JOIN DEPARTMENT B
+		ON A.DEP_ID = B.DEP_ID
+		LEFT OUTER JOIN JOB C
+		ON A.JOB_ID = C.JOB_ID
+		<include refid="searchFragResignation"/>
+	</select>
+	
+	<select id="selectEmployeeList" resultMap="employeeMap" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT 
+				A.EMP_ID
+			,	A.EMP_PASS
+			,	A.EMP_NM
+			,	TO_CHAR(A.EMP_BID, 'YYYY-MM-DD') EMP_BID
+			,	A.EMP_MAIL
+			,	A.EMP_PH
+			,	A.EMP_ADDR
+			,	TO_CHAR(A.EMP_HID, 'YYYY-MM-DD') EMP_HID
+			,	B.DEP_ID
+			,	B.DEP_HDC
+			,	B.DEP_TNM
+			,	B.DEP_NM
+			,	B.DEP_MAG
+			,	TO_CHAR(B.DEP_CRD, 'YYYY-MM-DD') DEP_CRD
+			, 	C.JOB_ID
+			,	C.JOB_HJC
+			,	C.JOB_TNM
+			,	C.JOB_NM
+			,	TO_CHAR(C.JOB_CRD, 'YYYY-MM-DD') JOB_CRD
+				FROM EMPLOYEE A LEFT OUTER JOIN DEPARTMENT B
+				ON A.DEP_ID = B.DEP_ID
+				LEFT OUTER JOIN JOB C
+				ON A.JOB_ID = C.JOB_ID
+				<include refid="searchFrag"/>
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectEmployee" parameterType="String" resultMap="employeeMap">
+		SELECT 
+				A.EMP_ID
+			,	A.EMP_PASS
+			,	A.EMP_NM
+			,	TO_CHAR(A.EMP_BID, 'YYYY-MM-DD') EMP_BID
+			,	A.EMP_MAIL
+			,	A.EMP_PH
+			,	A.EMP_ADDR
+			,	TO_CHAR(A.EMP_HID, 'YYYY-MM-DD') EMP_HID
+			,	TO_CHAR(A.EMP_END, 'YYYY-MM-DD') EMP_END
+			,	B.DEP_ID
+			,	B.DEP_HDC
+			,	B.DEP_TNM
+			,	B.DEP_NM
+			,	B.DEP_MAG
+			, 	C.JOB_ID
+			,	C.JOB_HJC
+			,	C.JOB_TNM
+			,	C.JOB_NM
+			,	D.ATT_NO
+			,	D.ATT_FNM
+			,	D.ATT_SNM
+			,	D.ATT_MIME
+			,	D.ATT_FIS
+			,	D.ATT_FAS
+			,	E.POW_NO
+			,	E.POW_ROLE
+		FROM EMPLOYEE A LEFT OUTER JOIN DEPARTMENT B
+		ON A.DEP_ID = B.DEP_ID
+		LEFT OUTER JOIN JOB C
+		ON A.JOB_ID = C.JOB_ID
+		LEFT OUTER JOIN ATTATCH D
+		ON A.EMP_ID = D.EMP_ID
+		LEFT OUTER JOIN POWER E
+		ON A.EMP_ID = E.EMP_ID
+		WHERE A.EMP_ID =#{empId}
+	</select>
+	
+	<insert id="insertEmployee" parameterType="EmployeeVO">
+		INSERT INTO EMPLOYEE
+		(
+				EMP_ID
+			,	COM_CODE
+			,	DEP_ID
+			,	JOB_ID
+			,	EMP_PASS
+			,	EMP_NM
+			,	EMP_BID
+			,	EMP_MAIL
+			,	EMP_PH
+			,	EMP_ADDR
+			,	EMP_HID
+		)VALUES(
+				#{empId, jdbcType=VARCHAR}
+			,	#{comCode, jdbcType=VARCHAR}
+			,	#{depId, jdbcType=VARCHAR}
+			,	#{jobId, jdbcType=NUMERIC}
+			,	#{empPass, jdbcType=VARCHAR}
+			,	#{empNm, jdbcType=VARCHAR}
+			,	#{empBid, jdbcType=DATE}
+			,	#{empMail, jdbcType=VARCHAR}
+			,	#{empPh, jdbcType=VARCHAR}
+			,	#{empAddr, jdbcType=VARCHAR}
+			,	#{empHid, jdbcType=DATE}
+		)
+	</insert>
+	
+	<update id="updateEmployee" parameterType="EmployeeVO">
+		UPDATE EMPLOYEE
+		SET
+				EMP_ID = #{empId, jdbcType=VARCHAR}
+			,	DEP_ID = #{depId, jdbcType=VARCHAR}
+			,	JOB_ID = #{jobId, jdbcType=NUMERIC}
+			,	EMP_NM = #{empNm, jdbcType=VARCHAR}
+			,	EMP_MAIL = #{empMail, jdbcType=VARCHAR}
+			,	EMP_PH = #{empPh, jdbcType=VARCHAR}
+			,	EMP_ADDR = #{empAddr, jdbcType=VARCHAR}
+		WHERE EMP_ID = #{empId, jdbcType=VARCHAR}
+	</update>
+	
+	<delete id="deleteEmployee" parameterType="EmployeeVO">
+		UPDATE EMPLOYEE
+		SET
+			EMP_END = SYSDATE
+		WHERE EMP_ID = #{empId, jdbcType=VARCHAR}
+	</delete>
+	
+	<select id="selectDepartmentList" parameterType="String" resultType="DepartmentVO">
+		SELECT * 
+		FROM DEPARTMENT
+		WHERE COM_CODE = #{comCode}
+	</select>
+	
+	<select id="selectJobList" parameterType="String" resultType="JobVO">
+		SELECT * 
+		FROM JOB
+		WHERE COM_CODE = #{comCode}
+	</select>
+	
+	<select id="selectResignationList" parameterType="PagingVO" resultMap="employeeMap">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT 
+				A.EMP_ID
+			,	A.EMP_PASS
+			,	A.EMP_NM
+			,	A.EMP_BID
+			,	A.EMP_MAIL
+			,	A.EMP_PH
+			,	A.EMP_ADDR
+			,	TO_CHAR(A.EMP_END, 'YYYY-MM-DD') EMP_END
+			,	B.DEP_ID
+			,	B.DEP_HDC
+			,	B.DEP_TNM
+			,	B.DEP_NM
+			,	B.DEP_MAG
+			, 	C.JOB_ID
+			,	C.JOB_HJC
+			,	C.JOB_TNM
+			,	C.JOB_NM
+				FROM EMPLOYEE A LEFT OUTER JOIN DEPARTMENT B
+				ON A.DEP_ID = B.DEP_ID
+				LEFT OUTER JOIN JOB C
+				ON A.JOB_ID = C.JOB_ID
+				<include refid="searchFragResignation"/>
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<delete id="deleteResignation" parameterType="EmployeeVO">
+		DELETE FROM EMPLOYEE
+		WHERE EMP_ID = #{empId}
+	</delete>
+	
+	<select id="idCheck" parameterType="EmployeeVO" resultType="int">
+		<![CDATA[
+		SELECT COUNT(*) FROM EMPLOYEE WHERE EMP_ID = #{empId}
+		]]>
+	</select>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

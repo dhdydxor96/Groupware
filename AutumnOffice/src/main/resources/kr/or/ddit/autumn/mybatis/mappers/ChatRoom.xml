@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.chat.dao.ChatRoomDAO"><!-- namespace에는 inface가 필요 -->
+
+
+
+	<select id="selectChatRoom" resultType="ChatRoomVO" parameterType="Integer">
+		SELECT *
+		FROM CHATROOM
+		WHERE 
+		ROOM_ID = #{roomId,jdbcType=INTEGER}
+	</select>
+
+
+	<insert id="insertChatRoom" parameterType="ChatRoomVO">
+	<selectKey resultType="int" keyProperty="roomId" order="BEFORE">
+	SELECT NVL(MAX(ROOM_ID), 0) + 1 FROM CHATROOM
+	</selectKey>
+		INSERT INTO CHATROOM (         
+			 ROOM_ID
+			,ROOM_NAME
+			
+			) VALUES (               
+					  #{roomId,jdbcType=INTEGER}
+					, #{roomName,jdbcType=VARCHAR}
+			)						 
+	</insert>
+	
+	<update id="updateChatRoom" parameterType="ChatRoomVO">
+	    UPDATE CHATROOM
+	    SET ROOM_NAME = #{roomName,jdbcType=VARCHAR} 
+		WHERE
+		ROOM_ID = #{roomId,jdbcType=INTEGER}
+	</update>
+	
+	<delete id="deleteChatRoom" parameterType="Integer">
+	    DELETE FROM CHATROOM
+		WHERE
+		ROOM_ID = #{roomId,jdbcType=INTEGER}
+	</delete>
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

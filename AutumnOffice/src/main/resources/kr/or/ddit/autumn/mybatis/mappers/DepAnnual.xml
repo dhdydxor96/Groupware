@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.attendance.dao.DepAnnualDao">
+
+
+<!-- 검색 기능 -->
+<sql id="searchFrag">
+	<trim prefix="AND"  > <!-- 조건을 만족하면 사용 (처음에 열어줬다가 마지막에 닫아줌) / 아니면 사용x --> <!-- <where> -->
+			<if test="'ROLE_HEAD' eq powRole" >
+				A.DEP_ID = #{depId}
+			</if>
+	</trim>
+		<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+		<!-- @org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord) -->
+			<choose>
+				<when test="'dept' eq simpleCondition.searchType">
+					AND INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0  
+				</when>		
+				<when test="'name' eq simpleCondition.searchType">
+					AND INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0  
+				</when>
+				<otherwise>
+					AND(
+						INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0  
+						OR 
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+						)  
+				</otherwise>		
+			</choose>
+		</if>
+</sql>
+
+<select id="selectDepAnnual" parameterType="string" resultType="kr.or.ddit.autumn.groupware.attendance.vo.DepAnnualVO">
+	SELECT A.EMP_NM, A.EMP_HID,trunc(months_between(sysdate,emp_hid) /12)EMP_YEARS,JOB_NM, B.DEP_NM, AUL_COT, AUL_LOT 
+	FROM JOBANNUAL A LEFT OUTER JOIN DEPARTMENT B
+	ON A.DEP_ID = B.DEP_ID
+	WHERE A.DEP_ID = #{depId}	
+</select>
+
+<select id="selectDepAnnualList" parameterType="PagingVO" resultType="kr.or.ddit.autumn.groupware.attendance.vo.DepAnnualVO">
+	SELECT *
+			FROM (
+				SELECT A.*, ROWNUM RNUM
+				FROM(
+					SELECT A.EMP_NM, TO_CHAR(A.EMP_HID, 'YYYY-MM-DD') EMP_HID,trunc(months_between(sysdate,emp_hid) /12)EMP_YEARS, JOB_NM, B.DEP_NM, AUL_COT, AUL_LOT 
+                    FROM EMPLOYEE A LEFT OUTER JOIN DEPARTMENT B
+                    ON A.DEP_ID = B.DEP_ID
+                    LEFT OUTER JOIN JOB C
+                    ON A.JOB_ID = C.JOB_ID
+                    LEFT OUTER JOIN AUL_LEAVE D
+                    ON A.EMP_ID = D.EMP_ID
+                    WHERE A.COM_CODE = #{comCode}   
+                    AND EMP_END IS NULL
+					<include refid="searchFrag"></include>  
+				) A
+			) B
+			<![CDATA[
+			WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+</select>
+
+<select id="selectTotalRecord" resultType="int" parameterType="PagingVO">
+     SELECT COUNT(*)
+     FROM
+     (
+     		SELECT A.EMP_NM, A.EMP_HID,trunc(months_between(sysdate,emp_hid) /12)EMP_YEARS, JOB_NM, B.DEP_NM, AUL_COT, AUL_LOT 
+             FROM EMPLOYEE A LEFT OUTER JOIN DEPARTMENT B
+             ON A.DEP_ID = B.DEP_ID
+             LEFT OUTER JOIN JOB C
+             ON A.JOB_ID = C.JOB_ID
+             LEFT OUTER JOIN AUL_LEAVE D
+             ON A.EMP_ID = D.EMP_ID
+             WHERE A.COM_CODE = #{comCode} 
+             AND EMP_END IS NULL
+             <include refid="searchFrag"></include> 
+     )
+
+</select>
+</mapper>

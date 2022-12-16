@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.management.group.job.dao.JobDAO">
+	<resultMap type="JobVO" id="jobMap" autoMapping="true">
+		<id property="jobId" column="JOB_ID"/>
+		<association property="job" javaType="JobVO" autoMapping="true"/>
+	</resultMap>
+
+	<sql id="searchFrag">
+		WHERE COM_CODE = #{comCode}
+		<trim prefix="AND (" suffix=")">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(JOB_ID, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'writer' eq simpleCondition.searchType">
+						INSTR(JOB_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(JOB_ID, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(JOB_NM, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<select id="selectTotalRecord" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+		FROM JOB
+		<include refid="searchFrag"/>
+	</select>
+	
+	<select id="selectJobList" resultType="JobVO" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT
+					JOB_ID
+					, JOB_NM
+					, TO_CHAR(JOB_CRD, 'YYYY-MM-DD') JOB_CRD
+				FROM JOB
+				<include refid="searchFrag"/>
+				ORDER BY ROWID DESC
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectJob" parameterType="int" resultType="JobVO">
+		SELECT
+				JOB_ID 
+			,	JOB_HJC
+			,	JOB_TNM
+			,	JOB_NM
+			,	TO_CHAR(JOB_CRD, 'YYYY-MM-DD') JOB_CRD
+			,	TO_CHAR(JOB_UPD, 'YYYY-MM-DD') JOB_UPD
+		FROM
+			JOB 
+		WHERE JOB_ID = #{jobId} 
+	</select>
+	
+	<insert id="insertJob" parameterType="JobVO">
+		<selectKey resultType="int" keyProperty="jobId" order="BEFORE">
+			SELECT JOB_SEQ.nextval
+			FROM DUAL
+		</selectKey>
+		INSERT INTO JOB
+		(	
+			JOB_ID 
+			,	JOB_HJC
+			,	JOB_TNM
+			,	JOB_NM
+			,	JOB_CRD
+			,	JOB_UPD
+			,	COM_CODE
+		)VALUES(
+			#{jobId, jdbcType=NUMERIC}
+		,	#{jobHjc, jdbcType=NUMERIC}
+		,	#{jobTnm, jdbcType=VARCHAR}
+		,	#{jobNm, jdbcType=VARCHAR}
+		,	SYSDATE
+		,	SYSDATE
+		,	#{comCode, jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<update id="updateJob" parameterType="JobVO">
+		UPDATE JOB
+		SET
+			JOB_ID = #{jobId, jdbcType=NUMERIC}
+		,	JOB_HJC = #{jobHjc, jdbcType=NUMERIC}
+		,	JOB_TNM = #{jobTnm, jdbcType=VARCHAR}
+		,	JOB_NM = #{jobNm, jdbcType=VARCHAR}
+		,	JOB_UPD = SYSDATE
+		WHERE JOB_ID = #{jobId}
+	</update>
+	
+	<delete id="deleteJob" parameterType="JobVO">
+		DELETE FROM JOB
+		WHERE JOB_ID = #{jobId}
+	</delete>
+	
+	<select id="idCheck" parameterType="JobVO" resultType="int">
+		<![CDATA[
+		SELECT COUNT(*) FROM JOB WHERE JOB_ID = #{jobId} AND COM_CODE = #{comCode}
+		]]>
+	</select>
+	
+	<select id="jobList" resultMap="jobMap">
+		SELECT *
+		FROM JOB
+		WHERE COM_CODE = #{comCode}
+	</select>
+	
+</mapper>

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.address.dao.AddressDAO">
+	
+	<sql id="searchFrag">
+		<trim prefix="AND (" suffix=")">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'writer' eq simpleCondition.searchType">
+						INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+						OR INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<select id="totalRecode" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+					FROM EMPLOYEE EMP LEFT OUTER JOIN DEPARTMENT DEP ON(EMP.DEP_ID = DEP.DEP_ID)
+                    LEFT OUTER JOIN JOB JO ON(EMP.JOB_ID = JO.JOB_ID)
+                    WHERE EMP.COM_CODE = #{comCode}
+		
+		<include refid="searchFrag"/>
+	</select>
+	
+	<select id="addressList" resultType="kr.or.ddit.autumn.groupware.address.vo.AddressVO" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT			
+	   		     EMP.EMP_NM
+	   		 ,   EMP.EMP_PH
+	  	     ,   EMP.EMP_MAIL
+		 	 ,   DEP.DEP_NM
+		     ,   JO.JOB_NM
+				 FROM EMPLOYEE EMP LEFT OUTER JOIN DEPARTMENT DEP ON(EMP.DEP_ID = DEP.DEP_ID)
+                 LEFT OUTER JOIN JOB JO ON(EMP.JOB_ID = JO.JOB_ID)
+                 WHERE EMP.COM_CODE = #{comCode}
+				<include refid="searchFrag"/>
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+</mapper>

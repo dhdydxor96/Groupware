@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:websocket="http://www.springframework.org/schema/websocket"
+	xmlns:int-stomp="http://www.springframework.org/schema/integration/stomp"
+	xsi:schemaLocation="http://www.springframework.org/schema/websocket http://www.springframework.org/schema/websocket/spring-websocket-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/integration/stomp http://www.springframework.org/schema/integration/stomp/spring-integration-stomp-5.2.xsd">
+
+	
+	
+    <bean id="notifyPushMessageHandler" class="kr.or.ddit.autumn.websocket.NotifyPushMessageHandler" />
+	
+
+	<websocket:handlers>
+		<websocket:mapping handler="notifyPushMessageHandler" path="/nt/pushMsg"/>
+		<websocket:sockjs websocket-enabled="true" />
+	</websocket:handlers>
+
+
+    
+	<websocket:message-broker  application-destination-prefix="/app" user-destination-prefix="/user">
+		<websocket:stomp-endpoint path="/stomp/echo" allowed-origins="*" >
+			<websocket:handshake-interceptors>
+				<bean class="org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor"
+					p:copyAllAttributes="true"
+					p:copyHttpSessionId="true"
+					p:createSession="false"
+				/>
+			</websocket:handshake-interceptors>
+			<websocket:sockjs/>
+		</websocket:stomp-endpoint>
+		<websocket:simple-broker prefix="/topic, /queue"/>
+
+	</websocket:message-broker>
+
+	
+    
+</beans>

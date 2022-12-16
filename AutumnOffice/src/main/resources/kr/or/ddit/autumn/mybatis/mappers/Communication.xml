@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.board.dao.CommunicationDAO">
+	
+	<sql id="searchFrag">
+		<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+			<choose>
+				<when test="'title' eq simpleCondition.searchType">
+					AND	INSTR(PO_TIT, #{simpleCondition.searchWord}) > 0
+				</when>
+				<when test="'writer' eq simpleCondition.searchType">
+					AND INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0				
+				</when>
+				<when test="'content' eq simpleCondition.searchType">
+					AND INSTR(PO_CON, #{simpleCondition.searchWord}) > 0
+				</when>
+				<otherwise>
+					AND (INSTR(PO_TIT, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(PO_CON, #{simpleCondition.searchWord}) > 0)
+				</otherwise>
+			</choose>
+		</if>
+	</sql>
+	
+	<sql id="communityFrag">
+		<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchCommunity)">
+			AND B.BO_CODE = #{boCode}
+		</if>
+	</sql>
+	
+	<resultMap type="PostVO" id="postListMap" autoMapping="true" >
+		<id property="poNo" column="PO_NO" />	
+		<association property="emp" javaType="EmployeeVO" autoMapping="true" />
+		<collection property="boardList" ofType="BoardVO" autoMapping="true">
+			<id property="boCode" column="BO_CODE"/>
+		</collection>
+<!-- 		<collection property="commentList" ofType="CommentsVO" >
+			<id property="cotNo" column="COT_NO"/>
+			결과 값을 CommentsVO에 empNm에 저장 하고 싶어서 만들 태그 DB로 조회한 COMEMP_NM을 column = ""에 설정해준다.
+			<result property="empNm" column="COMEMP_NM"/>
+		</collection> -->
+	</resultMap>
+	
+	<select id="selectPostList" resultMap="postListMap" parameterType="PagingVO">
+		SELECT *
+		FROM(
+		    SELECT A.*, ROWNUM RNUM	
+		    FROM(
+		        SELECT 
+		              EMP_NM
+		            , P.PO_NO
+		            , P.PO_VIE
+		            , P.PO_TIT
+		            , B.BO_TYPE
+		            , B.COM_CODE
+		            , B.BO_YN
+		            , TO_CHAR(P.PO_CRD, 'YYYY-MM-DD') as PO_CRD
+		        FROM POST P LEFT OUTER JOIN EMPLOYEE E ON(P.EMP_ID = E.EMP_ID)
+                            LEFT OUTER JOIN BOARD B ON(P.BO_CODE = B.BO_CODE)
+		        WHERE B.COM_CODE = #{comCode}
+		        <include refid="communityFrag"/>
+		        <include refid="searchFrag" />
+		        ORDER BY PO_CRD DESC
+		    )A
+		)C  
+		 <![CDATA[
+			WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+			ORDER BY RNUM ASC
+		]]>
+	</select>
+	
+	<select id="selectTotalRecord" parameterType="PagingVO" resultType="int">
+		SELECT COUNT(*)
+		FROM POST P LEFT OUTER JOIN EMPLOYEE E ON(P.EMP_ID = E.EMP_ID)
+                    LEFT OUTER JOIN BOARD B ON(P.BO_CODE = B.BO_CODE)
+        WHERE B.COM_CODE = #{comCode}
+         <include refid="communityFrag"/>
+		<include refid="searchFrag" />
+	</select>
+	
+	<select id="selectPost" parameterType="int" resultMap="postListMap">
+		SELECT A.PO_NO, TO_CHAR(PO_CRD, 'YYYY-MM-DD') as PO_CRD
+				, NVL(PO_VIE, 0) AS PO_VIE, PO_TIT, E.EMP_PASS
+				, PO_CON, A.BO_CODE, B.BO_YN, B.BO_TYPE, E.EMP_NM, A.EMP_ID
+		FROM POST A LEFT OUTER JOIN EMPLOYEE E ON (A.EMP_ID = E.EMP_ID)
+					LEFT OUTER JOIN BOARD B ON (A.BO_CODE = B.BO_CODE)
+		WHERE A.PO_NO = #{poNo} 
+	</select>
+	
+	<update id="incrementPoHit" parameterType="int">
+		UPDATE POST
+		SET
+		PO_VIE = PO_VIE + 1
+		WHERE PO_NO = #{poNo}
+	</update>
+	
+	<insert id="insertPost">
+		<selectKey keyProperty="poNo" order="BEFORE" resultType="int">
+			SELECT POST_SEQ.NEXTVAL AS PO_NO FROM DUAL
+		</selectKey>
+		INSERT INTO POST (
+				PO_NO
+			,	BO_CODE
+			,	EMP_ID
+			,	PO_TIT
+			,	PO_CRD
+			,	PO_CON
+			, 	PO_VIE
+		) VALUES (
+				#{poNo, jdbcType=NUMERIC}
+			,	#{boCode, jdbcType=VARCHAR}
+			,	#{empId, jdbcType=VARCHAR}
+			,	#{poTit, jdbcType=VARCHAR}
+			,	SYSDATE	
+			,	#{poCon, jdbcType=CLOB}
+			,	#{poVie, jdbcType=NUMERIC}
+		)		
+	</insert>
+	<update id="updatePost" parameterType="PostVO">
+		UPDATE POST
+		SET
+			PO_TIT = #{poTit, jdbcType=VARCHAR}
+		,	PO_CON = #{poCon, jdbcType=VARCHAR}
+		WHERE PO_NO = #{poNo}
+	</update>
+	
+	<delete id="deletePost" parameterType="PostVO">
+		DELETE FROM POST
+		WHERE PO_NO = #{poNo}
+	</delete>
+	
+	<select id="selectAttatchList" parameterType="PostVO" resultType="AttatchVO">
+		SELECT * FROM ATTATCH WHERE PO_NO = #{poNo}
+	</select>
+	
+	<select id="selectCommentList" parameterType="PostVO" resultType="CommentsVO">
+		SELECT * FROM COMMENTS WHERE PO_NO = #{poNo}	
+	</select>
+	
+	<delete id="deleteComment" parameterType="PostVO">
+		DELETE FROM COMMENTS WHERE PO_NO = #{poNo}
+	</delete>
+</mapper>

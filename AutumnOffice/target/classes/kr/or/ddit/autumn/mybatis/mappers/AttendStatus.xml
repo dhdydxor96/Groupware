@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.attendance.dao.AttendStatusDAO">
+
+	<!-- 검색 기능 -->
+	<sql id="searchFrag">
+		<trim prefix="AND"  > <!-- 조건을 만족하면 사용 (처음에 열어줬다가 마지막에 닫아줌) / 아니면 사용x --> <!-- <where> -->
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+			<!-- @org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord) -->
+				<choose>
+					<when test="'dept' eq simpleCondition.searchType">
+						INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0  
+					</when>		
+					<when test="'name' eq simpleCondition.searchType">
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0  
+					</when>
+					<otherwise>
+						INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0  
+						OR 
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</otherwise>		
+				</choose>
+			</if>
+		</trim>
+	</sql>
+
+
+	<insert id="insertMyStartWork" parameterType="String">
+		INSERT INTO EMP_STATUS (STA_NO, ESC_CODE, EMP_ID, STA_IND, STA_ONT)
+		VALUES(
+		EMP_STATUS_SEQ.NEXTVAL , 'A', #{empId} , SYSDATE, SYSTIMESTAMP
+		)
+	</insert>
+	
+	<select id="selectMyStartWorkOverlap" parameterType="String" resultType="int">
+		SELECT COUNT(*)
+		FROM EMP_STATUS
+		WHERE TO_CHAR(STA_IND,'YYYY-MM-DD') = TO_CHAR(SYSDATE,'YYYY-MM-DD')
+		AND EMP_ID = #{empId}
+	</select>
+	
+	<update id="updateMyEndWork" parameterType="String">
+		UPDATE EMP_STATUS
+		SET ESC_CODE = 'B'
+		,STA_OFT = SYSTIMESTAMP
+		WHERE EMP_ID = #{empId}
+		AND TO_CHAR(STA_IND,'YYYY-MM-DD') = TO_CHAR(SYSDATE,'YYYY-MM-DD')
+	</update>
+	
+	<select id="selectMyWorkInfo" parameterType="String" resultType="kr.or.ddit.autumn.groupware.attendance.vo.StatusVO">
+		SELECT EMP_NM, JOB_NM, TO_CHAR(STA_IND,'YYYY-MM-DD') STA_IND, TO_CHAR(STA_ONT,'HH24:MI:SS') STA_ONT, TO_CHAR(STA_OFT,'HH24:MI:SS') STA_OFT, 
+		    CASE 
+		        WHEN STA_OFT IS NULL 
+		            THEN (
+		            SELECT EXTRACT(DAY    FROM SYSDATE-STA_ONT) *24*60*60
+		                + EXTRACT(HOUR   FROM SYSDATE-STA_ONT) *60*60
+		                + EXTRACT(MINUTE FROM SYSDATE-STA_ONT) *60
+		                + EXTRACT(SECOND FROM SYSDATE-STA_ONT) AS second
+		            FROM EMP_STATUS
+		            WHERE EMP_ID = #{empId}
+		            AND TO_CHAR(STA_IND,'YYYY-MM-DD') = TO_CHAR(SYSDATE, 'YYYY-MM-DD')
+		            ) 
+		        WHEN STA_OFT IS NOT NULL
+		            THEN (
+		            SELECT EXTRACT(DAY    FROM STA_OFT-STA_ONT) *24*60*60
+		                + EXTRACT(HOUR   FROM STA_OFT-STA_ONT) *60*60
+		                + EXTRACT(MINUTE FROM STA_OFT-STA_ONT) *60
+		                + EXTRACT(SECOND FROM STA_OFT-STA_ONT) AS second
+		            FROM EMP_STATUS
+		            WHERE EMP_ID = #{empId}
+		            AND TO_CHAR(STA_IND,'YYYY-MM-DD') = TO_CHAR(SYSDATE, 'YYYY-MM-DD')
+		            )
+		        WHEN STA_ONT IS NULL
+		            THEN 0
+		        END AS SUM_SECOND
+		FROM EMPLOYEE A LEFT OUTER JOIN JOB B
+		ON A.JOB_ID = B.JOB_ID
+		LEFT OUTER JOIN EMP_STATUS C
+		ON A.EMP_ID = C.EMP_ID
+		WHERE A.EMP_ID = #{empId}
+		AND TO_CHAR(STA_IND,'YYYY-MM-DD') = TO_CHAR(SYSDATE, 'YYYY-MM-DD')
+	</select>	
+	
+	<select id="selectMyStatus" parameterType="String" resultType="kr.or.ddit.autumn.groupware.attendance.vo.StatusVO">
+		WITH DAYSCOPE AS(
+		SELECT TRUNC(SYSDATE, 'MM')-2+ROWNUM+1 DAY_VAL
+		 FROM DUAL
+		CONNECT BY LEVEL  <![CDATA[ <= ]]> (TO_CHAR(LAST_DAY(SYSDATE),'DD'))
+		), DAYTIMESCOPE AS(
+		    SELECT *
+		    FROM DAYSCOPE A LEFT OUTER JOIN (SELECT * FROM EMP_STATUS WHERE EMP_ID = #{empId}) B
+    		ON TO_CHAR(A.DAY_VAL,'YYYY-MM-DD') = TO_CHAR(B.STA_IND,'YYYY-MM-DD')
+		    ORDER BY DAY_VAL
+		)SELECT TO_CHAR(DAY_VAL,'YYYY-MM-DD') DAY_VAL, TO_CHAR(STA_ONT, 'HH24:MI:SS') STA_ONT, TO_CHAR(STA_OFT, 'HH24:MI:SS') STA_OFT,(STA_OFT-STA_ONT) SUM_STA,  STA_CON, STA_CHT, C.EMP_NM STA_NM, JOB_NM STA_JOB
+		FROM DAYTIMESCOPE LEFT OUTER JOIN EMPLOYEE C
+        ON STA_ID = C.EMP_ID
+        LEFT OUTER JOIN JOB D 
+        ON C.JOB_ID = D.JOB_ID
+	
+	</select>
+	
+	<select id="selectMyStatusSum" parameterType="String" resultType="Integer">
+		SELECT NVL (SUM(SECOND),0)
+		FROM(
+		SELECT EXTRACT(DAY    FROM SYSDATE-STA_ONT) *24*60*60
+		     + EXTRACT(HOUR   FROM SYSDATE-STA_ONT) *60*60
+		     + EXTRACT(MINUTE FROM SYSDATE-STA_ONT) *60
+		     + EXTRACT(SECOND FROM SYSDATE-STA_ONT) AS second
+		FROM EMP_STATUS
+		WHERE EMP_ID =#{empId}
+		AND STA_OFT IS NULL
+		AND TO_CHAR(STA_IND,'YYYY-MM-DD') BETWEEN TRUNC(SYSDATE, 'iw')  AND TRUNC(SYSDATE, 'iw')+6
+		UNION
+		SELECT EXTRACT(DAY    FROM STA_OFT-STA_ONT) *24*60*60
+		     + EXTRACT(HOUR   FROM STA_OFT-STA_ONT) *60*60
+		     + EXTRACT(MINUTE FROM STA_OFT-STA_ONT) *60
+		     + EXTRACT(SECOND FROM STA_OFT-STA_ONT) AS second
+		FROM EMP_STATUS
+		WHERE EMP_ID =#{empId}
+		AND STA_OFT IS NOT NULL
+		AND TO_CHAR(STA_IND,'YYYY-MM-DD') BETWEEN TRUNC(SYSDATE, 'iw')  AND TRUNC(SYSDATE, 'iw')+6
+		)
+	</select>
+	
+	<select id="selectMyStatusSumMonth" parameterType="String" resultType="int">
+		SELECT SUM(SECOND)
+		FROM(
+		SELECT EXTRACT(DAY    FROM SYSDATE-STA_ONT) *24*60*60
+		     + EXTRACT(HOUR   FROM SYSDATE-STA_ONT) *60*60
+		     + EXTRACT(MINUTE FROM SYSDATE-STA_ONT) *60
+		     + EXTRACT(SECOND FROM SYSDATE-STA_ONT) AS second
+		FROM EMP_STATUS
+		WHERE EMP_ID =#{empId}
+		AND STA_OFT IS NULL
+		AND TO_CHAR(STA_IND,'YYYY-MM-DD') BETWEEN TO_CHAR(TRUNC(SYSDATE, 'MM'),'YYYY-MM-DD') AND TO_CHAR(LAST_DAY(SYSDATE),'YYYY-MM-DD')
+		UNION
+		SELECT EXTRACT(DAY    FROM STA_OFT-STA_ONT) *24*60*60
+		     + EXTRACT(HOUR   FROM STA_OFT-STA_ONT) *60*60
+		     + EXTRACT(MINUTE FROM STA_OFT-STA_ONT) *60
+		     + EXTRACT(SECOND FROM STA_OFT-STA_ONT) AS second
+		FROM EMP_STATUS
+		WHERE EMP_ID =#{empId}
+		AND STA_OFT IS NOT NULL
+		AND TO_CHAR(STA_IND,'YYYY-MM-DD') BETWEEN TO_CHAR(TRUNC(SYSDATE, 'MM'),'YYYY-MM-DD') AND TO_CHAR(LAST_DAY(SYSDATE),'YYYY-MM-DD'))
+	
+	</select>
+	
+	<select id="selectDeptStatus" parameterType="kr.or.ddit.autumn.groupware.attendance.vo.StatusVO" resultType="kr.or.ddit.autumn.groupware.attendance.vo.StatusVO">
+		SELECT *
+			FROM (
+				SELECT A.*, ROWNUM RNUM
+				FROM(
+						SELECT B.DAY_VAL, A.EMP_ID, D.DEP_NM, JOB_NM, EMP_NM, TO_CHAR(C.STA_ONT,'HH24:MI:SS') || ' - ' || TO_CHAR(C.STA_OFT,'HH24:MI:SS') ALL_TIME
+						FROM EMPLOYEE A LEFT OUTER JOIN DEPARTMENT D
+						ON A.DEP_ID = D.DEP_ID
+						LEFT OUTER JOIN JOB J
+						ON A.JOB_ID = J.JOB_ID
+						CROSS JOIN (
+						SELECT TO_CHAR(SYSDATE - TO_CHAR(SYSDATE, 'D')+ROWNUM+1, 'YYYY-MM-DD') DAY_VAL
+						FROM DUAL
+						CONNECT BY LEVEL <![CDATA[ < ]]> 8
+						) B
+						LEFT OUTER JOIN EMP_STATUS C
+						ON B.DAY_VAL = TO_CHAR(C.STA_IND,'YYYY-MM-DD') AND A.EMP_ID = C.EMP_ID
+						WHERE A.COM_CODE = #{comCode}
+						<if test="'ROLE_HEAD' eq powRole">
+						AND A.DEP_ID = #{depId}
+						</if>
+						AND EMP_END IS NULL
+						<include refid="searchFrag"></include> 
+						ORDER BY  EMP_ID, DAY_VAL
+				) A
+			) B
+			<![CDATA[
+			WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectTotalCount" parameterType="PagingVO" resultType="int" >
+		SELECT COUNT(*)
+		FROM
+		(
+			SELECT B.DAY_VAL, A.EMP_ID, D.DEP_NM, JOB_NM, EMP_NM, TO_CHAR(C.STA_ONT,'HH24:MI:SS') || ' - ' || TO_CHAR(C.STA_OFT,'HH24:MI:SS') ALL_TIME
+			FROM EMPLOYEE A LEFT OUTER JOIN DEPARTMENT D
+			ON A.DEP_ID = D.DEP_ID
+			LEFT OUTER JOIN JOB J
+			ON A.JOB_ID = J.JOB_ID
+			CROSS JOIN (
+			SELECT TO_CHAR(SYSDATE - TO_CHAR(SYSDATE, 'D')+ROWNUM+1, 'YYYY-MM-DD') DAY_VAL
+			FROM DUAL
+			CONNECT BY LEVEL <![CDATA[ < ]]> 8
+			) B
+			LEFT OUTER JOIN EMP_STATUS C
+			ON B.DAY_VAL = TO_CHAR(C.STA_IND,'YYYY-MM-DD') AND A.EMP_ID = C.EMP_ID
+			WHERE A.COM_CODE = #{comCode}
+			<if test="'ROLE_HEAD' eq powRole">
+			AND A.DEP_ID = #{depId}
+			</if>
+			AND EMP_END IS NULL
+			<include refid="searchFrag"></include> 
+			ORDER BY  EMP_ID, DAY_VAL
+		)
+	</select>
+	
+	<select id="selectDeptStatusTime" parameterType="PagingVO" resultType="kr.or.ddit.autumn.groupware.attendance.vo.StatusVO">
+		SELECT EMP_ID, STA_IND, SUM(SECOND) SUM_SECOND
+		FROM(
+		SELECT A.EMP_ID,STA_IND,STA_ONT,STA_OFT, EXTRACT(DAY    FROM SYSDATE-STA_ONT) *24*60*60
+		     + EXTRACT(HOUR   FROM SYSDATE-STA_ONT) *60*60
+		     + EXTRACT(MINUTE FROM SYSDATE-STA_ONT) *60
+		     + EXTRACT(SECOND FROM SYSDATE-STA_ONT) AS second
+		FROM EMP_STATUS A
+		LEFT OUTER JOIN EMPLOYEE B
+		ON A.EMP_ID = B.EMP_ID
+		WHERE STA_OFT IS NULL
+		AND TO_CHAR(STA_IND,'YYYY-MM-DD') BETWEEN TRUNC(SYSDATE, 'iw')  AND TRUNC(SYSDATE, 'iw')+6
+		AND COM_CODE = #{comCode}
+<!-- 		AND DEP_ID = #{depId} -->
+		AND EMP_END IS NULL
+		UNION
+		SELECT A.EMP_ID, STA_IND,STA_ONT,STA_OFT, EXTRACT(DAY    FROM STA_OFT-STA_ONT) *24*60*60
+		     + EXTRACT(HOUR   FROM STA_OFT-STA_ONT) *60*60
+		     + EXTRACT(MINUTE FROM STA_OFT-STA_ONT) *60
+		     + EXTRACT(SECOND FROM STA_OFT-STA_ONT) AS second
+		FROM EMP_STATUS A
+		LEFT OUTER JOIN EMPLOYEE B
+		ON A.EMP_ID = B.EMP_ID
+		WHERE STA_OFT IS NOT NULL
+		AND TO_CHAR(STA_IND,'YYYY-MM-DD') BETWEEN TRUNC(SYSDATE, 'iw')  AND TRUNC(SYSDATE, 'iw')+6
+		AND COM_CODE = #{comCode}
+<!-- 		AND DEP_ID = #{depId} -->
+		AND EMP_END IS NULL
+		)
+		GROUP BY CUBE(EMP_ID, STA_IND)
+	</select>
+	
+	<update id="updateDeptEmployeeInfo" parameterType="kr.or.ddit.autumn.groupware.attendance.vo.StatusVO" >
+		UPDATE EMP_STATUS
+		SET ESC_CODE = #{escCode}
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(staOnt)">
+			, STA_ONT = #{staOnt}
+			</if>
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(staOft)">
+			, STA_OFT = #{staOft}
+			</if>
+			, STA_CHT = SYSTIMESTAMP
+			, STA_CON = #{staCon}
+			, STA_ID = #{staId}
+			WHERE TO_CHAR(STA_IND, 'YYYY-MM-DD') = #{updateDay}
+			AND EMP_ID = #{empId}
+	</update>
+	
+	<select id="selectDeptChangeStatus" parameterType="String" resultType="kr.or.ddit.autumn.groupware.attendance.vo.StatusVO">
+		SELECT TO_CHAR(STA_IND, 'YYYY-MM-DD')STA_IND, TO_CHAR(STA_CHT, 'YYYY-MM-DD') STA_CHT, STA_CON, EMP_NM STA_NM , JOB_NM STA_JOB
+		FROM EMP_STATUS A LEFT OUTER JOIN EMPLOYEE B
+		ON A.STA_ID = B.EMP_ID
+		LEFT OUTER JOIN JOB C
+		ON B.JOB_ID = C.JOB_ID
+		WHERE A.EMP_ID = #{empId}
+		AND STA_ONT BETWEEN TRUNC(SYSDATE, 'iw')  AND TRUNC(SYSDATE, 'iw')+6
+	</select>
+	
+
+</mapper>

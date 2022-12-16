@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.management.group.employee.dao.ManagementEmployeeAttatchDAO">
+	<insert id="insertAttatches" parameterType="EmployeeVO">
+		<selectKey resultType="int" keyProperty="startNo" order="BEFORE">
+			SELECT NVL(MAX(ATT_NO),0)+1
+			FROM ATTATCH	
+		</selectKey>
+		INSERT ALL
+		
+		<foreach collection="attatchList" item="attatch" index="idx">
+			INTO ATTATCH
+			(
+				ATT_NO
+				,	EMP_ID
+				,	ATT_FNM
+				,	ATT_SNM
+				,	ATT_MIME
+				,	ATT_FIS
+				,	ATT_FAS
+			)
+			VALUES
+			(
+				#{startNo}+#{idx}
+				, #{empId, jdbcType=VARCHAR}
+				, #{attatch.attFnm, jdbcType=VARCHAR}
+				, #{attatch.attSnm, jdbcType=VARCHAR}
+				, #{attatch.attMime, jdbcType=VARCHAR}
+				, #{attatch.attFis, jdbcType=NUMERIC}
+				, #{attatch.attFas, jdbcType=VARCHAR}
+			)
+		</foreach>
+		
+		SELECT * FROM DUAL
+	</insert>
+	<delete id="deleteAttatch" parameterType="String">
+		DELETE FROM ATTATCH
+		WHERE EMP_ID = #{empId}
+	</delete>
+	<delete id="deleteAttatches" parameterType="int[]">
+		DELETE 
+		FROM ATTATCH
+		WHERE ATT_NO IN 
+			<foreach collection="delAttNos" open="(" close=")" item="attNo" separator=",">
+				#{attNo}
+			</foreach>
+	</delete>
+	<select id="selectAttatch" parameterType="String" resultType="AttatchVO">
+		SELECT 	ATT_FNM, ATT_SNM
+			,	ATT_FIS, ATT_MIME
+		FROM ATTATCH
+		WHERE EMP_ID = #{empId}
+	</select>
+</mapper>

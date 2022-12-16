@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="kr.or.ddit.autumn.groupware.profile.dao.GroupwareProfileDAO">
+	
+	<!-- 프로필 관리 -->
+	<insert id="insertProfileImage" parameterType="AttatchVO">
+		<selectKey resultType="int" keyProperty="attNo" order="BEFORE">
+			SELECT NVL(MAX(ATT_NO),0)+1
+			FROM ATTATCH	
+		</selectKey>
+		
+		INSERT INTO ATTATCH
+			(
+				ATT_NO
+				,	EMP_ID
+				,	ATT_FNM
+				,	ATT_SNM
+				,	ATT_MIME
+				,	ATT_FIS
+				,	ATT_FAS
+			)
+			VALUES
+			(
+				#{attNo}
+				, #{empId, jdbcType=VARCHAR}
+				, #{attFnm, jdbcType=VARCHAR}
+				, #{attSnm, jdbcType=VARCHAR}
+				, #{attMime, jdbcType=VARCHAR}
+				, #{attFis, jdbcType=NUMERIC}
+				, #{attFas, jdbcType=VARCHAR}
+			)
+		
+	</insert>
+	
+	<delete id="deleteProfileImage" parameterType="String">
+		DELETE FROM ATTATCH
+		WHERE EMP_ID = #{empId}
+	</delete>
+	
+	<select id="selectEmployeeAttatchInfo" parameterType="String" resultType="AttatchVO">
+		SELECT 
+			ATT_NO,	ATT_FNM, ATT_SNM, ATT_MIME, ATT_FIS, ATT_FAS
+		FROM ATTATCH
+		WHERE EMP_ID =#{empId}
+	</select>
+	
+	
+	<!-- 로그인 내역 -->	
+
+	<!-- 검색 기능 -->
+	<sql id="searchFrag">
+		<trim prefix="AND" >
+				<choose>
+					<when test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.startDay) and
+					!@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.endDay)">
+						TO_CHAR(LOG_DT,'YYYY-MM-DD') BETWEEN #{simpleCondition.startDay}  AND SYSDATE
+					</when>		
+					<when test="!@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.startDay) and
+					@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.endDay)">
+						TO_CHAR(LOG_DT,'YYYY-MM-DD') BETWEEN '1990/01/01' AND #{simpleCondition.endDay} 
+					</when>
+					<when test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.startDay) and 
+								@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.endDay)">
+						TO_CHAR(LOG_DT,'YYYY-MM-DD') BETWEEN #{simpleCondition.startDay}  AND #{simpleCondition.endDay} 
+					</when>
+					<otherwise>
+							
+					</otherwise>		
+				</choose>
+		</trim>
+	</sql>
+
+	<select id="selectLoginIpInfo" resultType="LogVO" parameterType="LogVO">
+		SELECT *
+			FROM (
+				SELECT A.*, ROWNUM RNUM
+				FROM(
+					SELECT EMP_ID, LOG_IP, TO_CHAR(LOG_DT, 'YYYY-MM-DD HH24:MI:SS') LOG_DT
+					FROM LOG
+					WHERE EMP_ID = #{empId}
+					<include refid="searchFrag"></include>
+					ORDER BY LOG_DT DESC
+				) A
+			) B
+			<![CDATA[
+			WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectLoginIpInfoTotalCount" resultType="int" parameterType="kr.or.ddit.autumn.groupware.attendance.vo.AttendPagingVO">
+		SELECT COUNT(*)
+		FROM LOG
+		WHERE EMP_ID = #{empId}
+		<include refid="searchFrag"></include>
+	</select>
+	
+	<!-- 비밀번호 변경 -->
+	<select id="selectMyPassword" resultType="String" parameterType="EmployeeVO">
+		SELECT EMP_PASS
+		FROM EMPLOYEE
+		WHERE EMP_ID = #{empId}
+	</select>
+	
+	<update id="updateMyPassword">
+		UPDATE EMPLOYEE
+		SET EMP_PASS = #{empPass}
+		WHERE EMP_ID = #{empId}
+	</update>
+</mapper>

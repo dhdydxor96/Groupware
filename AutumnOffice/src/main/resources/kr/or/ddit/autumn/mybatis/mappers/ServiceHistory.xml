@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.management.wareservice.dao.ServiceHistoryDAO">
+	
+	<sql id="searchFrag">
+		<trim prefix="AND">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(COM_CODE, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(COM_CODE, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<select id="SelectTotalRecode" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+		FROM SERVICE 
+		WHERE
+		TO_CHAR(SYSDATE,'YYYY-MM-DD') BETWEEN SER_STD AND SER_END
+		<include refid="searchFrag"/>
+	</select>
+	
+	<select id="selectConsultingServiceList" resultType="ConsultingServiceVO" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT
+					*
+				FROM SERVICE
+				WHERE TO_CHAR(SYSDATE,'YYYY-MM-DD') BETWEEN SER_STD AND SER_END
+				<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(comCode)">
+				AND COM_CODE = #{comCode}
+				</if>
+				<include refid="searchFrag"/>
+				ORDER BY SER_STD DESC
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectConsultingService" parameterType="String" resultType="ConsultingServiceVO">
+		SELECT
+				SER_CODE 
+			,	A.COM_CODE
+			,	COM_CNM
+			,	SER_EMP
+			,	SER_PERI
+			,	SERVICE_PAY
+			,	SER_STD
+			,	SER_END
+			,	SER_NAME
+		FROM
+			SERVICE A LEFT OUTER JOIN COMPANY B
+			ON A.COM_CODE = B.COM_CODE
+		WHERE A.COM_CODE = #{comCode} AND TO_CHAR(SYSDATE,'YYYY-MM-DD') BETWEEN SER_STD AND SER_END
+	</select>
+</mapper>

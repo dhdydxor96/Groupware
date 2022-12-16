@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.management.base.dao.PopupDAO">
+	
+	<select id="searchPopupNo" resultType="java.lang.Integer">
+		SELECT 
+			DISTINCT	POPUP_NO 
+		FROM POPUP 
+		WHERE COM_CODE = #{comCode} 
+	</select>
+	
+	<select id="retrieveChildAttatch" parameterType="PopUpVO" resultType="AttatchVO">
+		SELECT 
+			  A.ATT_FNM
+			, A.ATT_SNM
+			, A.ATT_FIS
+			, A.ATT_MIME
+		FROM POPUP P INNER JOIN ATTATCH A ON(P.POPUP_NO = A.POPUP_NO)
+		WHERE P.POPUP_NO = #{popupNo}
+		AND P.COM_CODE = #{comCode}
+	</select>
+	
+	<delete id="deletePopup">
+		DELETE
+		FROM POPUP
+		WHERE POPUP_NO = #{popupNo}
+	</delete>
+	
+	<insert id="insertPopup">
+		<selectKey keyProperty="popupNo" order="BEFORE" resultType="int">
+			SELECT 
+				POPUP_SEQ.NEXTVAL AS POPUP_NO 
+			FROM DUAL
+		</selectKey>
+	
+		INSERT INTO POPUP (
+				POPUP_NO
+			,	POPUP_TITLE
+			,	POPUP_CONTENT
+			,	POPUP_STA
+			,	COM_CODE
+		)VALUES(
+				#{popupNo, jdbcType=NUMERIC}
+			,   #{popupTitle, jdbcType=VARCHAR}
+			, 	#{popupContent, jdbcType=VARCHAR}
+			,	#{popupSta, jdbcType=NUMERIC}
+			,	#{comCode, jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<select id="retrievePopup" resultType="PopUpVO">
+		SELECT 
+				POPUP_TITLE
+			,	POPUP_CONTENT 
+			,	POPUP_STA
+		FROM POPUP 
+		WHERE POPUP_NO = #{popupNo} 
+	</select>
+	
+	<update id="updatePopupSta" parameterType="PopUpVO">
+		UPDATE  POPUP
+		SET POPUP_STA = #{popupSta, jdbcType=NUMERIC}
+		WHERE POPUP_NO = #{popupNo}
+	</update>
+</mapper>

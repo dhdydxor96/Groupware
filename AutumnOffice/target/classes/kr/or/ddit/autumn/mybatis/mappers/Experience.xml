@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.web.experience.dao.ExperienceDAO">
+	<insert id="insertExperience" parameterType="ExperienceVO">
+		INSERT INTO EXPERIENCE
+		(
+			EXP_MAIL
+			,	EXP_COM
+			,	EXP_NM
+			,	EXP_TEL
+		)VALUES(
+			#{expMail, jdbcType=VARCHAR}
+			,	#{expCom, jdbcType=VARCHAR}
+			,	#{expNm, jdbcType=VARCHAR}
+			,	#{expTel, jdbcType=VARCHAR}
+		)
+	</insert>
+
+</mapper>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.web.matters.dao.MattersReplyDAO">
+	<resultMap type="MattersReplyVO" id="replyMap" autoMapping="true">
+		<id property="mrepNo" column="MREP_NO"/>
+	</resultMap>
+	<select id="mattersReplyList" parameterType="int" resultType="MattersReplyVO">
+		SELECT
+			MREP_NO
+			,	MREP_WRI
+			,	MREP_CON
+			,	MREP_DATE
+		FROM MAT_REPLY
+		WHERE MAT_NO = #{matNo}
+		ORDER BY MREP_NO ASC
+	</select>
+	
+	<insert id="insertReply" parameterType="MattersReplyVO">
+	<selectKey resultType="int" keyProperty="mrepNo" order="BEFORE"> -->
+ 			SELECT REPLY_SEQ.nextval
+ 			FROM DUAL 
+		</selectKey> 
+		INSERT INTO MAT_REPLY(
+			MREP_NO
+			,	MAT_NO
+			,	MREP_CON
+			,	MREP_WRI
+			,	MREP_DATE
+		)VALUES(
+			#{mrepNo}
+			,	#{matNo}
+			,	#{mrepCon}
+			,	#{mrepWri}
+			,	SYSDATE
+		)
+	</insert>
+	
+	<delete id="deleteReply" parameterType="MattersReplyVO">
+		DELETE FROM MAT_REPLY
+		WHERE MREP_NO = #{mrepNo}
+	</delete>
+	
+</mapper>

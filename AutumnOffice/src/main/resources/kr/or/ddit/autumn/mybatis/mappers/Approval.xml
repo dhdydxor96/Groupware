@@ -1,0 +1,723 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.approval.dao.ApprovalDAO">
+	<select id="selectAppFormList" parameterType="string" resultType="kr.or.ddit.autumn.vo.AppFormVO">
+		SELECT APF_NO
+		    , APF_NM
+		    , APF_CAT
+		FROM APP_FORM
+		WHERE
+			COM_CODE = #{comCode}
+	</select>
+	
+	<select id="selectDepartmentList" parameterType="string" resultType="kr.or.ddit.autumn.vo.DepartmentVO">
+		SELECT
+		    DISTINCT DEP.DEP_ID,
+		    DEP.DEP_HDC,
+		    DEP.DEP_TNM,
+		    DEP.DEP_NM,
+		    DEP.DEP_MAG,
+		    DEP.DEP_DST,
+		    DEP.DEP_CRD,
+		    DEP.DEP_UPD
+		FROM
+		    DEPARTMENT DEP LEFT OUTER JOIN EMPLOYEE EMP ON (DEP.DEP_ID = EMP.DEP_ID)
+		WHERE DEP.COM_CODE = #{comCode}
+	</select>
+	
+	<resultMap type="kr.or.ddit.autumn.vo.EmployeeVO" id="empMap" autoMapping="true">
+		<id property="empId" column="EMP_ID"/>
+		<association property="job" javaType="kr.or.ddit.autumn.vo.JobVO" autoMapping="true">
+			<id property="jobId" column="JOB_ID"/>
+		</association>
+		<association property="empStcode" javaType="kr.or.ddit.autumn.vo.EmpStcodeVO" autoMapping="true">
+			<id property="escCode" column="ESC_CODE"/>
+		</association>
+		<association property="department" javaType="kr.or.ddit.autumn.vo.DepartmentVO" autoMapping="true">
+			<id property="depId" column="DEP_ID"/>
+		</association>	
+	</resultMap>
+	
+	<resultMap type="kr.or.ddit.autumn.vo.DepartmentVO" id="deptMap" autoMapping="true">
+		<id property="depId" column="DEP_ID"/>
+		<collection property="employeeList" ofType="kr.or.ddit.autumn.vo.EmployeeVO" resultMap="empMap" autoMapping="true"/>
+	</resultMap>
+	<select id="selectDeptGroupList" parameterType="string" resultMap="deptMap">
+		SELECT
+		    DEP.DEP_ID
+		    , DEP.DEP_HDC
+		    , DEP.DEP_TNM
+		    , DEP.DEP_NM
+		    , DEP.DEP_MAG
+		    , DEP.DEP_DST
+		    , EMP.EMP_ID
+		    , EMP.EMP_NM
+		    , EMP.COM_CODE
+		    , EMP.EMP_MAIL
+		    , J.JOB_ID
+		    , J.JOB_NM
+		    , STCODE.ESC_CODE
+		    , STCODE.ESC_NM
+		FROM
+		    DEPARTMENT DEP LEFT OUTER JOIN EMPLOYEE EMP ON(DEP.DEP_ID = EMP.DEP_ID)
+		                    LEFT OUTER JOIN JOB J ON(EMP.JOB_ID = J.JOB_ID)
+		                    LEFT OUTER JOIN EMP_STATUS S ON(EMP.EMP_ID = S.EMP_ID)
+		                    LEFT OUTER JOIN EMP_STCODE STCODE ON(S.ESC_CODE = STCODE.ESC_CODE)
+		WHERE
+		    EMP.COM_CODE = #{comCode}
+		    ORDER BY DEP.DEP_ID ASC, J.JOB_ID ASC
+	</select>
+	
+	<insert id="insertAppLine" parameterType="kr.or.ddit.autumn.groupware.approval.vo.ApprovalFormVO">
+		<selectKey resultType="int" keyProperty="aplNo" order="BEFORE">
+			SELECT NVL(MAX(APL_NO), 0) + 1
+			FROM APP_LINE
+		</selectKey>
+		INSERT INTO APP_LINE(
+		    APL_NO
+		    , EMP_ID
+		    , APL_CODE
+		)VALUES(
+		    #{aplNo}
+		    , #{empId, jdbcType=VARCHAR}
+		    , 'D'
+		)
+	</insert>
+	
+	<select id="selectCountAppLine" resultType="int">
+		SELECT NVL(MAX(APL_NO), 0)
+		FROM APP_LINE
+	</select>
+	
+	
+	
+	<insert id="insertAplDetail" parameterType="java.util.List">
+		<selectKey resultType="int" keyProperty="startNo" order="BEFORE">
+			SELECT NVL(MAX(APD_NO), 0) + 1
+			FROM APL_DETAIL
+		</selectKey>
+		
+		<foreach collection="list" open="INSERT ALL" item="item" index="idx">
+			INTO APL_DETAIL(
+			    APD_NO
+			    , APL_NO
+			    , EMP_ID
+			    , APD_ORD
+			    , APL_STA
+			    , APL_TURN
+			    <if test="item.decSta == 1">
+			    , DEC_STA
+			    </if>
+			)VALUES(
+			    #{startNo} + #{idx}
+			    , #{item.aplNo}
+			    , #{item.empId}
+			    , #{idx} + 1
+			    , 0
+			    <if test="idx == 0">
+			    , 1
+			    </if>
+			    <if test="idx != 0">
+			    , 0
+			    </if>
+			    <if test="item.decSta == 1">
+			    , 1
+			    </if>
+			)
+		</foreach>
+		SELECT * FROM DUAL
+	</insert>
+	
+	<insert id="insertEleRef" parameterType="java.util.List">
+		<selectKey resultType="int" keyProperty="startNo" order="BEFORE">
+			SELECT NVL(MAX(ELR_NO), 0) + 1
+			FROM ELE_REF
+		</selectKey>
+		
+		<foreach collection="list" open="INSERT ALL" item="item" index="idx">
+			INTO ELE_REF(
+			    ELR_NO
+			    , ELE_NO
+			    , EMP_ID
+			)VALUES(
+			    #{startNo} + #{idx}
+			    , #{item.eleNo}
+			    , #{item.empId}
+			)
+		</foreach>
+		SELECT * FROM DUAL
+	</insert>
+	
+	<insert id="insertApproval" parameterType="kr.or.ddit.autumn.vo.ElecAppVO">
+		<selectKey resultType="int" keyProperty="eleNo" order="BEFORE">
+			SELECT NVL(MAX(ELE_NO), 0) + 1
+			FROM ELEC_APP
+		</selectKey>
+		INSERT INTO ELEC_APP(
+			ELE_NO
+			, APF_NO
+			, APL_NO
+			, EMP_ID
+			, ELE_TIT
+			, ELE_USE
+			, ELE_CON
+			, ELE_CRD
+			, ELE_YN
+			, DEP_ID
+			, ELE_START
+			, ELE_END
+		)VALUES(
+			#{eleNo}
+			, #{apfNo, jdbcType=NUMERIC}
+			, #{aplNo, jdbcType=NUMERIC}
+			, #{empId, jdbcType=VARCHAR}
+			, #{eleTit, jdbcType=VARCHAR}
+			, #{eleUse, jdbcType=VARCHAR}
+			, #{eleCon, jdbcType=VARCHAR}
+			, SYSDATE
+			, #{eleYn, jdbcType=BOOLEAN}
+			, #{depId}
+			, #{eleStart, jdbcType=VARCHAR}
+			, #{eleEnd, jdbcType=VARCHAR}
+		)
+	</insert>
+	
+	<insert id="insertAppStatus" parameterType="int">
+		<selectKey resultType="int" keyProperty="eleNo" order="BEFORE">
+			SELECT ELE_NO
+			FROM ELEC_APP
+			WHERE APL_NO = #{aplNo}
+		</selectKey>
+		INSERT INTO APP_STATUS(
+			ELE_NO
+			, APL_NO
+			, APS_STATUS
+		)VALUES(
+			#{eleNo}
+			, #{aplNo, jdbcType=NUMERIC}
+			, '0'
+		)
+	</insert>
+	
+	<select id="selectEleNo" parameterType="int" resultType="int">
+		SELECT 
+			ELE_NO
+		FROM ELEC_APP
+		WHERE APL_NO = #{aplNo}
+	</select>
+	
+	<!-- 문의사항게시글 목록 조회 : 페이징 + 검색(제목-title, 작성자-writer, 내용-content, 전체 -->
+	<sql id="searchFlag">
+		<trim prefix="AND">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord) or @org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.state)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(ELE_TIT, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'content' eq simpleCondition.searchType">
+						INSTR(ELE_CON, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'all' eq simpleCondition.searchType">
+						(INSTR(ELE_TIT, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(ELE_CON, #{simpleCondition.searchWord}) > 0)
+						<if test="!simpleCondition.state.equals('all')">
+							AND
+							APS_STATUS = #{simpleCondition.state}
+						</if>
+					</when>
+					<when test="simpleCondition.state.equals('read')">
+						1 = 1
+					</when>
+					<when test="simpleCondition.state.equals('ref')">
+						1 = 1
+					</when>
+					<when test="!simpleCondition.state.equals('all')">
+						APS_STATUS = #{simpleCondition.state}
+					</when>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<sql id="menuFlag">
+		<trim prefix="WHERE">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(menuFlag)">
+				<choose>
+					<when test="'draft' eq menuFlag">
+						ELE.EMP_ID = #{empId}
+					</when>
+					<when test="'approval' eq menuFlag">
+						APL.EMP_ID = #{empId}
+						AND APL.APL_STA = '1'
+					</when>
+					<when test="'ref' eq menuFlag">
+						RE.EMP_ID = #{empId}
+					</when>
+					<when test="'read' eq menuFlag">
+						ELE_YN = '1'
+						AND APS_STATUS = '1'
+					</when>
+					<when test="'wait' eq menuFlag">
+						APL.EMP_ID = #{empId}
+						AND APL.APL_STA = '0'
+					</when>
+					<when test="'due' eq menuFlag">
+						APL.EMP_ID = #{empId}
+					</when>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<sql id="appFlag">
+		<trim prefix="AND">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(appFlag)">
+				<choose>
+					<when test="'wait' eq appFlag">
+						APL.APL_TURN = 1
+					</when>
+					<when test="'expected' eq appFlag">
+						APL.APL_STA = 0
+                    	AND APL.APL_TURN = 0
+					</when>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	
+	<select id="selectElecAppTotalRecord" resultType="int" parameterType="PagingVO">
+		SELECT 
+            COUNT(DISTINCT ELE.ELE_NO)
+        FROM ELEC_APP ELE INNER JOIN APP_FORM AFO ON(ELE.APF_NO = AFO.APF_NO)
+                                INNER JOIN APP_STATUS AST ON(ELE.ELE_NO = AST.ELE_NO)
+                                INNER JOIN EMPLOYEE EMP ON (ELE.EMP_ID = EMP.EMP_ID)
+                                INNER JOIN APL_DETAIL APL ON (APL.APL_NO = ELE.APL_NO)
+                                LEFT OUTER JOIN ELE_REF RE ON (ELE.ELE_NO = RE.ELE_NO)
+        <include refid="menuFlag"/>
+		<include refid="searchFlag"/>
+		<include refid="appFlag"/>
+	</select>
+	
+	<resultMap type="ElecAppVO" id="elecAppMap" autoMapping="true">
+		<id property="eleNo" column="ELE_NO"/>
+		<association property="appForm" javaType="kr.or.ddit.autumn.vo.AppFormVO" autoMapping="true">
+			<id property="apfNo" column="APF_NO"/>
+		</association>
+		<association property="appStatus" javaType="kr.or.ddit.autumn.vo.AppStatusVO" autoMapping="true">
+			<id property="eleNo" column="ELE_NO"/>		
+		</association>
+	</resultMap>
+	<select id="selectElecAppList" resultMap="elecAppMap" parameterType="kr.or.ddit.autumn.groupware.approval.vo.DocBoxPagingVO">
+		SELECT B.*
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT 
+                    DISTINCT ELE.ELE_NO
+                    , ELE.APF_NO
+                    , ELE.APL_NO
+                    , ELE.EMP_ID
+                    , ELE.ELE_TIT
+                    , ELE.ELE_USE
+                    , ELE.ELE_CON
+                    , TO_CHAR(ELE.ELE_CRD, 'YYYY-MM-DD/HH24:MI') AS ELE_CRD
+                    , ELE.ELE_DYN
+                    , ELE.ELE_YN
+                    , AFO.COM_CODE
+                    , AFO.APF_NM
+                    , AFO.APF_CAT
+                    , AFO.APF_FAYN
+                    , AST.APS_STATUS
+                    , AST.APS_DATE
+                    , AST.APS_RER
+                    , EMP.EMP_NM
+                FROM ELEC_APP ELE INNER JOIN APP_FORM AFO ON(ELE.APF_NO = AFO.APF_NO)
+                                INNER JOIN APP_STATUS AST ON(ELE.ELE_NO = AST.ELE_NO)
+                                INNER JOIN EMPLOYEE EMP ON (ELE.EMP_ID = EMP.EMP_ID)
+                                INNER JOIN APL_DETAIL APL ON (APL.APL_NO = ELE.APL_NO)
+                                LEFT OUTER JOIN ELE_REF RE ON (ELE.ELE_NO = RE.ELE_NO)
+	                <include refid="menuFlag"/>
+					<include refid="searchFlag"/>
+					<include refid="appFlag"/>
+					ORDER BY ELE.ELE_NO DESC
+					)A
+				)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<resultMap type="kr.or.ddit.autumn.vo.AplDetailVO" id="aplDetailMap" autoMapping="true">
+		<id property="apdNo" column="APD_NO"/>
+		<association property="employee" javaType="kr.or.ddit.autumn.vo.EmployeeVO" autoMapping="true">
+			<id property="empId" column="EMP_ID"/>
+			<association property="job" javaType="kr.or.ddit.autumn.vo.JobVO" autoMapping="true">
+				<id property="jobId" column="JOB_ID"/>
+				<result property="jobNm" column="JOB_NM"/>
+			</association>
+			<association property="empStcode" javaType="kr.or.ddit.autumn.vo.EmpStcodeVO" autoMapping="true">
+				<id property="escCode" column="ESC_CODE"/>
+			</association>
+			<association property="department" javaType="kr.or.ddit.autumn.vo.DepartmentVO" autoMapping="true">
+				<id property="depId" column="DEP_ID"/>
+			</association>	
+		</association>
+		
+	</resultMap>
+	
+	<resultMap type="kr.or.ddit.autumn.vo.ElecAppVO" id="elecAppMap2" autoMapping="true">
+		<id property="eleNo" column="ELE_NO"/>
+		<result property="empId" column="ELE_EMPID"/>
+		<result property="empNm" column="ELE_EMPNM"/>
+		<result property="jobNm" column="ELE_JOBNM"/>
+		<association property="appForm" javaType="kr.or.ddit.autumn.vo.AppFormVO" autoMapping="true">
+			<id property="apfNo" column="APF_NO"/>
+		</association>
+		<collection property="aplDetailList" ofType="kr.or.ddit.autumn.vo.AplDetailVO" resultMap="aplDetailMap" autoMapping="true"/>
+	</resultMap>
+	
+	<select id="selectElecApp" parameterType="int" resultMap="elecAppMap2">
+		SELECT 
+		    ELE.ELE_NO
+		    , ELE.APF_NO
+		    , ELE.APL_NO
+		    , ELE.EMP_ID as ELE_EMPID
+		    , (SELECT DEP.DEP_NM FROM ELEC_APP ELE INNER JOIN EMPLOYEE EMP ON (ELE.EMP_ID = EMP.EMP_ID)
+									                INNER JOIN DEPARTMENT DEP ON (EMP.DEP_ID = DEP.DEP_ID)
+													WHERE ELE.ELE_NO = #{eleNo}) AS ELE_DEPNM	
+		    , (SELECT EMP_NM FROM EMPLOYEE A INNER JOIN ELEC_APP B ON(A.EMP_ID = B.EMP_ID) WHERE B.ELE_NO = #{eleNo}) as ELE_EMPNM
+		    , (SELECT JOB_NM FROM JOB A INNER JOIN EMPLOYEE B ON (A.JOB_ID = B.JOB_ID)
+                                        INNER JOIN ELEC_APP C ON (B.EMP_ID = C.EMP_ID)
+                                        WHERE C.ELE_NO = #{eleNo}	) ELE_JOBNM
+		    , ELE.ELE_TIT
+		    , ELE.ELE_USE
+		    , ELE.ELE_CON
+		    , TO_CHAR(ELE.ELE_START, 'YYYY-MM-DD') AS ELE_START
+            , TO_CHAR(ELE.ELE_END, 'YYYY-MM-DD') AS ELE_END
+		    , ELE.DEP_ID
+		    , ELE.ELE_YN
+		    , DEP.DEP_NM
+		    , TO_CHAR(ELE.ELE_CRD, 'YYYY-MM-DD/HH24:MI') AS ELE_CRD
+		    , (SELECT EMP.EMP_SIGN FROM EMPLOYEE EMP INNER JOIN ELEC_APP ELE ON(EMP.EMP_ID = ELE.EMP_ID) WHERE ELE.ELE_NO = #{eleNo}) AS EMP_SIGN
+		    , APP.COM_CODE
+		    , APP.APF_NM
+		    , APP.APF_CAT
+		    , APP.APF_FAYN
+		    , APL.APD_NO
+		    , APL.EMP_ID
+		    , APL.APD_ORD
+		    , APL.APL_DATE
+		    , APL.APL_TURN
+		    , APL.DEC_STA
+		    , EMP.EMP_NM
+		    , JO.JOB_NM
+		FROM ELEC_APP ELE INNER JOIN APP_FORM APP ON(ELE.APF_NO = APP.APF_NO)
+		                INNER JOIN APL_DETAIL APL ON(ELE.APL_NO = APL.APL_NO)
+		                INNER JOIN EMPLOYEE EMP ON(APL.EMP_ID = EMP.EMP_ID)
+		                INNER JOIN JOB JO ON (EMP.JOB_ID = JO.JOB_ID)
+		                INNER JOIN DEPARTMENT DEP ON(ELE.DEP_ID = DEP.DEP_ID)
+		WHERE ELE.ELE_NO = #{eleNo}	
+		ORDER BY APL.APD_ORD
+	</select>
+	
+	<select id="selectEleRefList" parameterType="int" resultType="kr.or.ddit.autumn.vo.EleRefVO">
+		SELECT 
+		    A.ELR_NO
+		    , A.ELE_NO
+		    , A.EMP_ID
+		    , B.EMP_NM
+		    , C.JOB_NM
+		    , D.DEP_NM
+		FROM ELE_REF A INNER JOIN EMPLOYEE B ON(A.EMP_ID = B.EMP_ID)
+		                INNER JOIN JOB C ON(B.JOB_ID = C.JOB_ID)
+		                INNER JOIN DEPARTMENT D ON(B.DEP_ID = D.DEP_ID)
+		WHERE A.ELE_NO = #{eleNo}
+	</select>
+	
+	<update id="updateApproval" parameterType="kr.or.ddit.autumn.vo.AplDetailVO">
+		UPDATE APL_DETAIL
+		SET APL_STA = 1,
+		    APL_TURN = 2,
+		    APL_DATE = SYSDATE,
+		    EMP_SIGN = #{empSign, jdbcType=BLOB}
+		WHERE APL_NO = #{aplNo} AND EMP_ID = #{empId}
+	</update>
+	
+	<update id="updateSetNextLine" parameterType="kr.or.ddit.autumn.vo.AplDetailVO">
+		UPDATE APL_DETAIL
+		SET APL_TURN = 1
+		WHERE APL_NO = #{aplNo} AND EMP_ID = #{empId}
+	</update>
+	
+	<select id="selectAplDetailList" parameterType="int" resultType="kr.or.ddit.autumn.vo.AplDetailVO">
+		SELECT 
+		    APD_NO
+		    , APL.APL_NO
+		    , APL.EMP_ID
+		    , APL.APD_ORD
+		    , APL.APL_DATE
+		    , APL.APL_STA
+		    , APL.APL_TURN
+		    , APL.EMP_SIGN
+		FROM APL_DETAIL APL
+		WHERE APL_NO = #{aplNo}
+		ORDER BY APL.APD_ORD
+	</select>
+	
+	<update id="updateEmpSign" parameterType="kr.or.ddit.autumn.vo.EmployeeVO">
+		UPDATE EMPLOYEE
+		SET EMP_SIGN = #{empSign, jdbcType=BLOB}
+		WHERE EMP_ID = #{empId}
+	</update>
+	
+	<select id="selectNextApl" parameterType="int" resultType="kr.or.ddit.autumn.vo.AplDetailVO">
+		SELECT  
+        ROWNUM
+            , APD_NO
+            , APL_NO
+            , EMP_ID
+            , APD_ORD
+            , APL_DATE
+            , APL_STA
+            , APL_TURN
+        FROM APL_DETAIL
+        WHERE APL_NO = #{aplNo}
+            AND APL_STA = 0
+            AND ROWNUM = 1
+            ORDER BY APD_ORD
+	</select>
+	
+	<select id="selectApfCat" parameterType="int" resultType="string">
+		SELECT 
+		    DISTINCT APP.APF_CAT
+		FROM APP_FORM APP INNER JOIN ELEC_APP ELE ON(APP.APF_NO = ELE.APF_NO)
+        WHERE ELE.ELE_NO = #{eleNo}
+	</select>
+	
+	<insert id="insertVacation" parameterType="kr.or.ddit.autumn.vo.ElecAppVO">
+		<selectKey resultType="int" keyProperty="vacNo" order="BEFORE">
+			SELECT NVL(MAX(VAC_NO), 0) + 1
+			FROM VACATION
+		</selectKey>
+		
+		INSERT INTO VACATION (
+			VAC_NO
+			, ELE_NO
+			, VAC_START
+			, VAC_END
+		)VALUES(
+			#{vacNo}
+			, #{eleNo, jdbcType=NUMERIC}
+			, #{eleStart, jdbcType=DATE}
+			, #{eleEnd, jdbcType=DATE}
+		)
+	</insert>
+	
+	<insert id="insertBusTrip" parameterType="kr.or.ddit.autumn.vo.ElecAppVO">
+		<selectKey resultType="int" keyProperty="bstNo" order="BEFORE">
+			SELECT NVL(MAX(BST_NO), 0) + 1
+			FROM BUS_TRIP
+		</selectKey>
+		
+		INSERT INTO BUS_TRIP(
+			BST_NO
+			, ELE_NO
+			, BST_START
+			, BST_END
+		)VALUES(
+			#{bstNo}
+			, #{eleNo, jdbcType=NUMERIC}
+			, #{eleStart, jdbcType=DATE}
+			, #{eleEnd, jdbcType=DATE}
+		)
+	</insert>
+	
+	<select id="selectAulLeave" parameterType="int" resultType="kr.or.ddit.autumn.vo.AulLeaveVO">
+		SELECT
+			AUL_NO
+			, EMP_ID
+			, AUL_COT
+			, AUL_LOT
+			, AUL_STA
+		FROM
+			AUL_LEAVE
+		WHERE
+			EMP_ID = (SELECT EMP_ID FROM ELEC_APP WHERE ELE_NO = #{eleNo})
+	</select>
+	
+	<select id="selectElecAppDate" parameterType="int" resultType="kr.or.ddit.autumn.vo.ElecAppVO">
+		SELECT
+			ELE_NO
+			, EMP_ID
+			, TO_CHAR(ELE_START, 'YYYY-MM-DD') AS ELE_START
+			, TO_CHAR(ELE_END, 'YYYY-MM-DD') AS ELE_END
+		FROM
+			ELEC_APP
+		WHERE
+			ELE_NO = #{eleNo}
+	</select>
+	
+	<insert id="insertLveRecode" parameterType="kr.or.ddit.autumn.vo.LveRecodeVO">
+		<selectKey resultType="int" keyProperty="lerCode" order="BEFORE">
+			SELECT NVL(MAX(LER_CODE), 0) + 1
+			FROM LVE_RECODE
+		</selectKey>
+		INSERT INTO LVE_RECODE(
+		    LER_CODE
+		    , ELE_NO
+		    , AUL_NO
+		    , LER_START
+		    , LER_END
+		)VALUES(
+			#{lerCode}
+			, #{eleNo, jdbcType=NUMERIC}
+			, #{aulNo, jdbcType=NUMERIC}
+			, TO_DATE(#{lerStart, jdbcType=VARCHAR},'YYYY-MM-DD')
+			, TO_DATE(#{lerEnd, jdbcType=VARCHAR},'YYYY-MM-DD')
+		)
+	</insert>
+	
+	<update id="updateLeftoverAnnual" parameterType="string">
+		UPDATE AUL_LEAVE
+		SET AUL_LOT = 
+		(
+		SELECT AUL_COT-AUL_USE AUL_LOT
+		FROM (
+		    SELECT AUL_COT,
+		        (
+		            SELECT SUM(LER_END-LER_START+1) 
+		            FROM LVE_RECODE B LEFT OUTER JOIN AUL_LEAVE C
+		            ON B.AUL_NO = C.AUL_NO
+		            WHERE C.EMP_ID = #{empId}
+		            AND TO_CHAR(LER_START,'YYYY') = TO_CHAR(SYSDATE ,'YYYY')
+		        ) AUL_USE
+		        FROM AUL_LEAVE
+		        WHERE EMP_ID = #{empId}
+		    )
+		) WHERE EMP_ID = #{empId}
+	</update>
+	
+	<update id="updateAppStatus" parameterType="kr.or.ddit.autumn.vo.AppStatusVO">
+		UPDATE APP_STATUS
+		SET
+			APS_STATUS = #{apsStatus}
+			, APS_DATE = SYSDATE
+		WHERE ELE_NO = #{eleNo}
+	</update>
+	
+	<update id="updateCancelAps" parameterType="kr.or.ddit.autumn.vo.AppStatusVO">
+		UPDATE APP_STATUS
+		SET
+			APS_STATUS = 3
+			, APS_RER = #{apsRer}
+		WHERE
+			ELE_NO = #{eleNo}
+	</update>
+	
+	<update id="updateCancelApl" parameterType="kr.or.ddit.autumn.vo.AplDetailVO">
+		UPDATE APL_DETAIL
+		SET
+			APL_STA = 3
+			, APL_TURN = 6
+		WHERE
+			APL_NO = #{aplNo}
+		AND
+			EMP_ID = #{empId}
+	</update>
+	
+	<select id="selectAppStatus" parameterType="int" resultType="kr.or.ddit.autumn.vo.AppStatusVO">
+		SELECT
+			ELE_NO
+			, APL_NO
+			, APS_STATUS
+			, APS_DATE
+			, APS_RER
+		FROM
+			APP_STATUS
+		WHERE
+			APL_NO = #{aplNo}
+	</select>
+	
+	<delete id="deleteAplDetail" parameterType="int">
+		DELETE FROM APL_DETAIL WHERE APL_NO = #{aplNo}
+	</delete>
+	
+	<delete id="deleteAppLine" parameterType="int">
+		DELETE FROM APP_LINE WHERE APL_NO = #{aplNo}
+	</delete>
+	
+	<delete id="deleteAppStatus" parameterType="int">
+		DELETE FROM APP_STATUS WHERE ELE_NO = #{eleNo}
+	</delete>
+	
+	<delete id="deleteElecApp" parameterType="int">
+		DELETE FROM ELEC_APP WHERE ELE_NO = #{eleNo}
+	</delete>
+	
+	<delete id="deleteEleRef" parameterType="int">
+		DELETE FROM ELE_REF WHERE ELE_NO = #{eleNo}
+	</delete>
+	
+	<delete id="deleteAttatch" parameterType="int">
+		DELETE FROM ATTATCH WHERE ELE_NO = #{eleNo}
+	</delete>
+	
+	<insert id="insertEleDecide" parameterType="kr.or.ddit.autumn.vo.EleDecideVO">
+		<selectKey resultType="int" keyProperty="eldNo" order="BEFORE">
+			SELECT NVL(MAX(ELD_NO), 0) + 1
+			FROM ELE_DECIDE
+		</selectKey>
+		INSERT INTO ELE_DECIDE(
+			ELD_NO
+			, EMP_ID
+			, EMP_PROXY
+			, ELD_START
+			, ELD_END
+			, ELD_RES
+			, ELD_IND
+		) VALUES(
+			#{eldNo}
+			, #{empId}
+			, #{empProxy}
+			, #{eldStart, jdbcType=DATE}
+			, #{eldEnd, jdbcType=DATE}
+			, #{eldRes}
+			, SYSDATE
+		)
+	</insert>
+	
+	<select id="selectEleDecideList" parameterType="string" resultType="kr.or.ddit.autumn.vo.EleDecideVO">
+		SELECT
+			ELE.ELD_NO
+			, ELE.EMP_ID
+			, ELE.EMP_PROXY
+			, EMP.EMP_NM
+			, TO_CHAR(ELE.ELD_START,'YYYY-MM-DD') AS ELD_START
+			, TO_CHAR(ELE.ELD_END,'YYYY-MM-DD') AS ELD_END
+			, ELE.ELD_RES
+			, ELE.ELD_IND
+			, ELE.ELD_USE
+			, J.JOB_NM
+		FROM
+			ELE_DECIDE ELE INNER JOIN EMPLOYEE EMP ON (ELE.EMP_PROXY = EMP.EMP_ID)
+							INNER JOIN JOB J ON (EMP.JOB_ID = J.JOB_ID)
+		WHERE
+			ELE.EMP_ID = #{empId}
+	</select>
+	
+	<delete id="deleteEleDecide" parameterType="kr.or.ddit.autumn.vo.EleDecideVO">
+		DELETE FROM ELE_DECIDE WHERE ELD_NO = #{eldNo}
+	</delete>
+	
+	<select id="selectEleDecide" parameterType="string" resultType="string">
+		SELECT
+		    EMP_PROXY
+		FROM
+		    ELE_DECIDE
+		WHERE
+		    SYSDATE BETWEEN ELD_START AND ELD_END
+		    AND EMP_ID = #{empId}
+	</select>
+</mapper>

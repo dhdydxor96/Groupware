@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.archive.dao.ArchiveDAO">
+	<select id="selectAttatch" parameterType="int" resultType="kr.or.ddit.autumn.vo.AttatchVO">
+		SELECT 
+			ATT_NO	
+			, ATT_FNM
+			, ATT_SNM
+			, ATT_FIS
+			, ATT_MIME
+			, ATT_FAS
+		FROM ATTATCH
+		WHERE ATT_NO = #{attNo}
+	</select>
+
+</mapper>

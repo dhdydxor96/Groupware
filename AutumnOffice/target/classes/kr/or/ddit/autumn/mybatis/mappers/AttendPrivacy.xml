@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.attendance.dao.AttendPrivacyDAO">
+
+	<sql id="searchFrag">
+		<trim prefix="AND"  > <!-- 조건을 만족하면 사용 (처음에 열어줬다가 마지막에 닫아줌) / 아니면 사용x --> <!-- <where> -->
+			<if test="'ROLE_HEAD' eq powRole" >
+				A.DEP_ID = #{depId}
+			</if>
+		</trim>
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition1.searchWord)">
+			<!-- @org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord) -->
+				<choose>
+					<when test="'name' eq simpleCondition1.searchType">
+						AND INSTR(EMP_NM, #{simpleCondition1.searchWord}) > 0  
+					</when>		
+					<when test="'dept' eq simpleCondition1.searchType">
+						AND INSTR(DEP_NM, #{simpleCondition1.searchWord}) > 0  
+					</when>
+					<otherwise>
+							AND
+							(
+							INSTR(EMP_NM, #{simpleCondition1.searchWord}) > 0  
+							OR 
+							INSTR(DEP_NM, #{simpleCondition1.searchWord}) > 0  
+							)
+					</otherwise>		
+				</choose>
+			</if>
+	</sql>
+
+
+	<select id="selectMyPrivacyInfo" parameterType="String" resultType="kr.or.ddit.autumn.groupware.attendance.vo.AttendEmployeeVO">
+		SELECT EMP_ID, A.COM_CODE, DEP_NM, JOB_NM,EMP_PASS ,EMP_NM, TO_CHAR(EMP_BID,'YYYY-MM-DD') EMP_BID , EMP_MAIL, EMP_PH, EMP_ADDR, TO_CHAR(EMP_HID,'YYYY-MM-DD') EMP_HID, TO_CHAR(EMP_END,'YYYY-MM-DD') EMP_END, EMP_STA
+		FROM EMPLOYEE A LEFT OUTER JOIN DEPARTMENT B
+        ON A.DEP_ID = B.DEP_ID
+        LEFT OUTER JOIN JOB C
+        ON A.JOB_ID = C.JOB_ID
+		WHERE A.EMP_ID = #{empId}
+	</select>
+	
+	<select id="selectTotalDeptPrivacy" parameterType="kr.or.ddit.autumn.groupware.attendance.vo.AttendEmployeeVO" resultType="int">
+		SELECT COUNT(*)
+		FROM EMPLOYEE
+		WHERE COM_CODE = #{comCode}
+		AND EMP_END IS NULL
+		<if test="'ROLE_HEAD' eq powRole" >
+			AND A.DEP_ID = #{depId}
+		</if>
+	</select>
+	
+	<select id="selectDeptPrivacyList" parameterType="kr.or.ddit.autumn.groupware.attendance.vo.AttendPagingVO" resultType="kr.or.ddit.autumn.groupware.attendance.vo.AttendEmployeeVO">
+		SELECT *
+			FROM (
+				SELECT A.*, ROWNUM RNUM
+				FROM(
+					SELECT                                        
+	                    EMP_ID, A.COM_CODE, DEP_NM, JOB_NM,EMP_PASS ,EMP_NM, TO_CHAR(EMP_BID,'YYYY-MM-DD') EMP_BID , EMP_MAIL, EMP_PH, EMP_ADDR, TO_CHAR(EMP_HID,'YYYY-MM-DD') EMP_HID, TO_CHAR(EMP_END,'YYYY-MM-DD') EMP_END, EMP_STA
+                        FROM EMPLOYEE A LEFT OUTER JOIN DEPARTMENT B
+                        ON A.DEP_ID = B.DEP_ID
+                        LEFT OUTER JOIN JOB C
+                        ON A.JOB_ID = C.JOB_ID
+                        WHERE A.COM_CODE = #{comCode}  
+                        AND EMP_END IS NULL
+                        <include refid="searchFrag"></include>   
+					ORDER BY A.DEP_ID 
+				) A
+			) B
+			<![CDATA[
+			WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectTotalRecord" resultType="int" parameterType="kr.or.ddit.autumn.groupware.attendance.vo.AttendPagingVO">
+		SELECT COUNT(*)
+		FROM EMPLOYEE A LEFT OUTER JOIN DEPARTMENT B
+		ON A.DEP_ID = B.DEP_ID
+		WHERE A.COM_CODE =#{comCode}
+		AND EMP_END IS NULL
+		<include refid="searchFrag"></include> 
+	</select>
+	
+	<select id="selectProfileImage" parameterType="String" resultType="AttatchVO">
+		SELECT a.EMP_ID, B.ATT_NO ATT_NO, ATT_FNM , ATT_SNM, ATT_MIME, ATT_FIS, ATT_FAS, ATT_DOW
+		FROM EMPLOYEE A LEFT OUTER JOIN ATTATCH B
+		ON A.EMP_ID = B.EMP_ID
+		WHERE A.EMP_ID = #{empId}
+	</select>
+
+</mapper>

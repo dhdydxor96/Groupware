@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:security="http://www.springframework.org/schema/security"
+	xmlns:mvc="http://www.springframework.org/schema/mvc"
+	xsi:schemaLocation="http://www.springframework.org/schema/security http://www.springframework.org/schema/security/spring-security-4.2.xsd
+		http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<!-- groupware security manager -->
+	<security:authentication-manager id="authenticationManager">
+		<security:authentication-provider user-service-ref="authService">
+			<security:password-encoder ref="passwordEncoder"/>
+		</security:authentication-provider>
+	</security:authentication-manager>
+	
+	
+	<bean class="kr.or.ddit.autumn.commons.login.handler.LoginSuccessHandler" id="authenticationSuccessHandler"
+		p:defaultTargetUrl="/groupware/index.do"
+		p:alwaysUseDefaultTargetUrl="true"
+	/>
+	
+	<!-- management security manager -->
+	<security:authentication-manager id="ManageAuthenticationManager">
+		<security:authentication-provider user-service-ref="ManageAuthService">
+		
+		</security:authentication-provider>
+	</security:authentication-manager>
+	
+	<bean class="kr.or.ddit.autumn.commons.login.handler.ManageLoginSuccessHandler" id="manageLoginSuccessHandler"
+		p:defaultTargetUrl="/management/index.do"
+		p:alwaysUseDefaultTargetUrl="true"
+	/>
+	
+	
+	<!-- 이녀석이 자동으로 인증해줌, 이놈 자체가 필터 체인 -->
+	<!-- 등록되어있는 authentication manager가 하나이면 ref 선언 안해줘도 됨 -->
+	<!-- access-decision 은 인가 관리를 한다. -->
+	<security:http security="none" pattern="/web/**"/>
+	<security:http security="none" pattern="/resources/**"/>
+	<security:http security="none" pattern="/"/>
+	
+	<security:http pattern="/management/**" authentication-manager-ref="ManageAuthenticationManager" auto-config="true">
+		<security:form-login 
+			login-page="/groupware/login/login.do"
+			username-parameter="comId"
+			password-parameter="comPass"
+			login-processing-url="/management/login/loginCheck.do"
+			authentication-success-handler-ref="manageLoginSuccessHandler"
+		/>
+		
+		<security:logout
+			logout-url="/management/login/logout.do"
+			logout-success-url="/groupware/login/login.do"
+			invalidate-session="true"
+		/>
+		<security:intercept-url pattern="/management/login/**" access="permitAll"/>
+		<security:intercept-url pattern="/management/**" access="isAuthenticated()"/>
+		<security:intercept-url pattern="/**" access="isAuthenticated()"/>
+		<security:csrf/>
+	</security:http>
+	
+	<security:http pattern="/**" authentication-manager-ref="authenticationManager" auto-config="true">
+		<security:form-login 
+			login-page="/groupware/login/login.do"
+			username-parameter="empId"
+			password-parameter="empPass"
+			login-processing-url="/groupware/login/loginCheck.do"
+			authentication-success-handler-ref="authenticationSuccessHandler"
+		/>
+		
+		<security:logout
+			logout-url="/groupware/login/logout.do"
+			logout-success-url="/groupware/login/login.do"
+			invalidate-session="true"
+		/>
+		
+		<security:access-denied-handler error-page="/errors/access.jsp"/>
+		<!-- 보호자원 설정 pattern url 요청을 가로채서 검사한다. access는 if같은 개념 -->
+		<!-- ROLE_ADMIN에서 ROLE_는 못바꿈 실제 사용은 ADMIN만 사용 -->
+		<!-- 순서대로 검증하기때문에 board/** 같은거가 위에 있으면 걸림 범위설정 같은거는 마지막에 해야함 -->
+		<security:intercept-url pattern="/groupware/attendance/deptAnnualHistoryList.do" access="hasAnyRole('DIRECTOR', 'HEAD')"/>
+		<security:intercept-url pattern="/groupware/survey/idChk" access="isAuthenticated()"/>
+		<security:intercept-url pattern="/groupware/survey/surveyDeadlineEssayResponseChart.do" access="isAuthenticated()"/>
+		<security:intercept-url pattern="/groupware/survey/surveyDeadlineResponseChart.do" access="isAuthenticated()"/>
+		<security:intercept-url pattern="/groupware/survey/surveyDeadlineList.do" access="isAuthenticated()"/>
+		<security:intercept-url pattern="/groupware/survey/surveyProgressList.do" access="isAuthenticated()"/>
+		<security:intercept-url pattern="/groupware/survey/surveyResponseInsert.do" access="isAuthenticated()"/>
+		<security:intercept-url pattern="/groupware/survey/surveyProgressEssayResponseChart.do" access="isAuthenticated()"/>
+		<security:intercept-url pattern="/groupware/survey/surveyProgressResponseChart.do" access="isAuthenticated()"/>
+		
+		<security:intercept-url pattern="/groupware/attendance/dept/**" access="hasAnyRole('DIRECTOR', 'HEAD')"/>
+		<security:intercept-url pattern="/groupware/survey/**" access="hasAnyRole('DIRECTOR', 'HEAD')"/>
+		<security:intercept-url pattern="/groupware/login/**" access="permitAll"/>
+		<security:intercept-url pattern="/commons/login/**" access="permitAll"/>
+		<security:intercept-url pattern="/groupware/**" access="isAuthenticated()"/>
+		<security:intercept-url pattern="/**" access="isAuthenticated()"/>
+		<!-- 기본으로 포함됨 , CSRF 공격 방지용 security:http에 기본으로 들어있다 -->
+		<security:csrf/>
+	</security:http>
+	
+	
+	<mvc:view-controller path="/groupware/login/login.do" view-name="/groupware/login/login"/>
+	<mvc:view-controller path="/management/login/login.do" view-name="/groupware/login/login"/>
+</beans>

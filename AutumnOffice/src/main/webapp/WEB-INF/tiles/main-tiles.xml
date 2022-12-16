@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE tiles-definitions PUBLIC "-//Apache Software Foundation//DTD Tiles Configuration 3.0//EN" "http://tiles.apache.org/dtds/tiles-config_3_0.dtd" >
+<tiles-definitions>
+<!--  	definition name == logical view name -->
+ 
+  <definition name="web" template="/WEB-INF/views/template/web-template.jsp">
+  	<put-attribute name="title" value="Autumn Office" />
+  	<put-attribute name="preScript" value="/includee/web/preScript.jsp"/>
+  	<put-attribute name="hero" value="/includee/web/hero.jsp"/>
+  	<put-attribute name="header" value="/includee/web/header.jsp"/>
+  	<put-attribute name="footer" value="/includee/web/footer.jsp"/>
+  	<put-attribute name="postScript" value="/includee/web/postScript.jsp"/>
+  </definition>
+  
+  <definition name="groupware" template="/WEB-INF/views/template/groupware-template.jsp">
+  	<put-attribute name="title" value="Autumn Groupware" />
+  	<put-attribute name="preScript" value="/includee/groupware/preScript.jsp"/>
+  	<put-attribute name="leftMenu" value="/includee/groupware/leftMenu.jsp"/>
+  	<put-attribute name="header" value="/includee/groupware/header.jsp"/>
+  	<put-attribute name="footer" value="/includee/groupware/footer.jsp"/>
+  	<put-attribute name="postScript" value="/includee/groupware/postScript.jsp"/>
+  </definition>
+  
+  <definition name="management" template="/WEB-INF/views/template/management-template.jsp">
+  	<put-attribute name="title" value="Autumn Groupware" />
+  	<put-attribute name="preScript" value="/includee/management/preScript.jsp"/>
+  	<put-attribute name="header" value="/includee/management/header.jsp"/>
+  	<put-attribute name="leftMenu" value="/includee/management/leftMenu.jsp"/>
+  	<put-attribute name="footer" value="/includee/management/footer.jsp"/>
+  	<put-attribute name="postScript" value="/includee/management/postScript.jsp"/>
+  </definition>
+  
+  <!-- web definitnion -->
+  <definition name="web/index" extends="web">
+  	<put-attribute name="main" value="/WEB-INF/views/web/index.jsp" />
+  </definition>
+  
+  <definition name="web/*/*" extends="web">
+  	<put-attribute name="main" value="/WEB-INF/views/web/{1}/{2}.jsp"/>
+  </definition>
+  
+  <definition name="web/*/*/*" extends="web">
+  	<put-attribute name="main" value="/WEB-INF/views/web/{1}/{2}/{3}.jsp"/>
+  </definition>
+  <!-- web end -->
+  
+  <!-- ================================== -->
+  
+  <!-- groupware definition -->
+  <definition name="groupware/index" extends="groupware">
+  	<put-attribute name="main" value="/WEB-INF/views/groupware/index.jsp" />
+  </definition>
+  <definition name="groupware/*/*" extends="groupware">
+  	<put-attribute name="main" value="/WEB-INF/views/groupware/{1}/{2}.jsp"/>
+  </definition>
+  <definition name="groupware/*/*/*" extends="groupware">
+  	<put-attribute name="main" value="/WEB-INF/views/groupware/{1}/{2}/{3}.jsp"/>
+  </definition>
+  <!-- groupware end -->
+  
+  
+  <!-- ================================== -->
+  
+  <!-- management definition -->
+  <definition name="management/index" extends="management">
+  	<put-attribute name="main" value="/WEB-INF/views/management/index.jsp" />
+  </definition>
+  <definition name="management/*/*" extends="management">
+  	<put-attribute name="main" value="/WEB-INF/views/management/{1}/{2}.jsp"/>
+  </definition>
+  <definition name="management/*/*/*" extends="managementb">
+  	<put-attribute name="main" value="/WEB-INF/views/management/{1}/{2}/{3}.jsp"/>
+  </definition>
+  <!-- management end -->
+  
+  
+  
+<!--   <definition name="board/*" extends="parent"> -->
+<!--   	<put-attribute name="main" value="/WEB-INF/jsp/board/{1}.jsp"/> -->
+<!--   </definition> -->
+  
+</tiles-definitions>

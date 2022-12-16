@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.board.dao.BoardDAO">
+	
+	<resultMap type="PostVO" id="boardListMap" autoMapping="true">
+		<collection property="boardList" ofType="BoardVO" autoMapping="true">
+			<id property="boCode" column="BO_CODE"/>
+		</collection>
+	</resultMap>
+	
+	<select id="selectCategory" parameterType="string" resultType="BoardVO">
+		SELECT DISTINCT B.BO_CODE, B.BO_TYPE
+		FROM BOARD B LEFT OUTER JOIN POST P ON(B.BO_CODE = P.BO_CODE)
+		WHERE COM_CODE = #{comCode}
+	</select>
+
+	<select id="selectNoticeNumber" parameterType="string" resultType="string">
+		SELECT DISTINCT B.BO_CODE, B.BO_TYPE
+		FROM BOARD B LEFT OUTER JOIN POST P ON(B.BO_CODE = P.BO_CODE)
+		WHERE COM_CODE = #{comCode}
+	</select>
+	
+</mapper>

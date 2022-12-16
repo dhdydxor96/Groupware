@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.management.security.dao.LoginTrackingDAO">
+	
+	<sql id="searchFrag">
+		<trim prefix="AND (" suffix=")">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'writer' eq simpleCondition.searchType">
+						INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0				
+					</when>
+					<otherwise>
+					INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					OR INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<select id="totalRecode" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+			FROM LOG LO LEFT OUTER JOIN EMPLOYEE EMP ON(LO.EMP_ID = EMP.EMP_ID)
+            LEFT OUTER JOIN JOB JO ON(EMP.JOB_ID = JO.JOB_ID)
+            LEFT OUTER JOIN DEPARTMENT DEP ON(EMP.DEP_ID = DEP.DEP_ID)
+            WHERE EMP.COM_CODE = #{comCode}
+		<include refid="searchFrag"/>
+	</select>
+	
+	<select id="loginTrackingList" resultType="LogVO" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT
+ 				   LO.LOG_NO
+  				  ,LO.LOG_IP
+   				  ,LO.LOG_DT
+   				  ,EMP.EMP_ID
+   				  ,EMP.EMP_NM
+   				  ,DEP.DEP_NM
+   				  ,JO.JOB_NM
+			FROM LOG LO LEFT OUTER JOIN EMPLOYEE EMP ON(LO.EMP_ID = EMP.EMP_ID)
+            LEFT OUTER JOIN JOB JO ON(EMP.JOB_ID = JO.JOB_ID)
+            LEFT OUTER JOIN DEPARTMENT DEP ON(EMP.DEP_ID = DEP.DEP_ID)
+            WHERE EMP.COM_CODE = #{comCode}
+				<include refid="searchFrag"/>
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+</mapper>

@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.survey.dao.SurveyInvestigationDAO">
+	<resultMap type="SurveyInvestigationVO" id="surveyInvestigationMap" autoMapping="true">
+		<id property="surinvNo" column="SURINV_NO"/>
+		<association property="survey" javaType="SurveyVO" autoMapping="true"/>
+		<association property="surveyQuestion" javaType="SurveyQuestionVO" autoMapping="true"/>
+		<association property="surveyArticle" javaType="SurveyArticleVO" autoMapping="true"/>
+	</resultMap>
+	
+	
+	<sql id="searchFrag">
+		WHERE C.COM_CODE = #{comCode}
+		<trim prefix="AND (" suffix=")">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(SUR_TITLE, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'writer' eq simpleCondition.searchType">
+						INSTR(SURQUE_CONTENT, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'content' eq simpleCondition.searchType">
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(SUR_TITLE, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(SURQUE_CONTENT, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<sql id="searchDeadlineFrag">
+		WHERE C.COM_CODE = #{comCode} AND SUR_STATE = 2
+		<trim prefix="AND (" suffix=")">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(SUR_TITLE, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'writer' eq simpleCondition.searchType">
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(SUR_TITLE, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<sql id="searchProgressFrag">
+		WHERE C.COM_CODE = #{comCode} AND SUR_STATE = 1
+		<trim prefix="AND (" suffix=")">
+			<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+				<choose>
+					<when test="'title' eq simpleCondition.searchType">
+						INSTR(SUR_TITLE, #{simpleCondition.searchWord}) > 0
+					</when>
+					<when test="'writer' eq simpleCondition.searchType">
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</when>
+					<otherwise>
+						INSTR(SUR_TITLE, #{simpleCondition.searchWord}) > 0
+						OR
+						INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+					</otherwise>
+				</choose>
+			</if>
+		</trim>
+	</sql>
+	
+	<select id="selectTotalRecord" resultType="int" parameterType="PagingVO">
+		SELECT COUNT(*)
+		FROM SUR_INV A LEFT OUTER JOIN SURVEY B
+        ON A.SUR_NO = B.SUR_NO
+        LEFT OUTER JOIN EMPLOYEE C
+        ON B.EMP_ID = C.EMP_ID
+        LEFT OUTER JOIN SUR_QUE D
+       	ON A.SURQUE_NO = D.SURQUE_NO
+		<include refid="searchFrag"/>
+	</select>
+	
+	<select id="selectSurveyInvestigationList" resultMap="surveyInvestigationMap" parameterType="PagingVO">
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT
+						A.SURINV_NO
+					,	A.SURINV_ANSWER
+					,	A.SURINV_TYPE
+					,	TO_CHAR(A.SURINV_INSDAT, 'YYYY-MM-DD') SURINV_INSDAT
+					,	A.SURINV_FIRST
+					,	A.SURINV_SECOND
+					,	A.SURINV_THIRD
+					,	A.SURINV_FOUR
+					,	A.SURINV_FIVE
+					,	D.SURQUE_NO
+					,	D.SURQUE_TURN
+					,	D.SURQUE_TYPE
+					,	D.SURQUE_CONTENT
+					,	TO_CHAR(D.SURQUE_INSDAT, 'YYYY-MM-DD') SURQUE_INSDAT
+					,	B.SUR_NO
+					,	B.SUR_TITLE
+					,	B.SUR_PURPOSE
+					,	B.SUR_GUIDE
+					,	TO_CHAR(B.SUR_SDATE, 'YYYY-MM-DD') SUR_SDATE
+					,	TO_CHAR(B.SUR_EDATE, 'YYYY-MM-DD') SUR_EDATE
+					,	B.SUR_STATE
+					,	TO_CHAR(B.SUR_INSDAT, 'YYYY-MM-DD') SUR_INSDAT
+					,	C.EMP_PASS
+					,	C.EMP_NM
+					,	C.EMP_BID
+					,	C.EMP_MAIL
+					,	C.EMP_PH
+					,	C.EMP_ADDR
+					,	C.EMP_HID
+					,	C.EMP_END
+					,	E.SURARC_NO
+					,	E.SURARC_TURN
+					,	E.SURARC_CONTENT
+					,	TO_CHAR(E.SURARC_INSDAT, 'YYYY-MM-DD') SURARC_INSDAT
+		        FROM SUR_INV A LEFT OUTER JOIN SURVEY B
+		        ON A.SUR_NO = B.SUR_NO
+		        LEFT OUTER JOIN EMPLOYEE C
+		        ON B.EMP_ID = C.EMP_ID
+		        LEFT OUTER JOIN SUR_QUE D
+       	 		ON A.SURQUE_NO = D.SURQUE_NO
+       	 		LEFT OUTER JOIN SUR_ARC E
+       	 		ON A.SURARC_NO = E.SURARC_NO
+				<include refid="searchFrag"/>
+				ORDER BY B.SUR_NO, A.SURARC_NO ASC
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectSurveyInvestigation" parameterType="int" resultType="SurveyInvestigationVO">
+		SELECT 
+				A.SURINV_NO
+			,	A.SURINV_ANSWER
+			,	A.SURINV_TYPE
+			,	TO_CHAR(A.SURINV_INSDAT, 'YYYY-MM-DD') SURINV_INSDAT
+			,	A.SURINV_FIRST
+			,	A.SURINV_SECOND
+			,	A.SURINV_THIRD
+			,	A.SURINV_FOUR
+			,	A.SURINV_FIVE
+			,	D.SURQUE_NO
+			,	D.SURQUE_TURN
+			,	D.SURQUE_TYPE
+			,	D.SURQUE_CONTENT
+			,	TO_CHAR(D.SURQUE_INSDAT, 'YYYY-MM-DD') SURQUE_INSDAT
+			,	B.SUR_NO
+			,	B.SUR_TITLE
+			,	B.SUR_PURPOSE
+			,	B.SUR_GUIDE
+			,	TO_CHAR(B.SUR_SDATE, 'YYYY-MM-DD') SUR_SDATE
+			,	TO_CHAR(B.SUR_EDATE, 'YYYY-MM-DD') SUR_EDATE
+			,	B.SUR_STATE
+			,	TO_CHAR(B.SUR_INSDAT, 'YYYY-MM-DD') SUR_INSDAT
+			,	C.EMP_PASS
+			,	C.EMP_NM
+			,	C.EMP_BID
+			,	C.EMP_MAIL
+			,	C.EMP_PH
+			,	C.EMP_ADDR
+			,	C.EMP_HID
+			,	C.EMP_END
+			,	E.SURARC_NO
+			,	E.SURARC_TURN
+			,	E.SURARC_CONTENT
+			,	TO_CHAR(E.SURARC_INSDAT, 'YYYY-MM-DD') SURARC_INSDAT
+		FROM SUR_INV A LEFT OUTER JOIN SURVEY B
+		ON A.SUR_NO = B.SUR_NO
+		LEFT OUTER JOIN EMPLOYEE C
+		ON B.EMP_ID = C.EMP_ID
+		LEFT OUTER JOIN SUR_QUE D
+		ON A.SURQUE_NO = D.SURQUE_NO
+		LEFT OUTER JOIN SUR_ARC E
+		ON A.SURARC_NO = E.SURARC_NO
+		WHERE SURINV_NO = #{surinvNo}
+	</select>
+	
+	<insert id="insertSurveyInvestigation" parameterType="SurveyInvestigationVO">
+		INSERT INTO SUR_INV
+		(
+			SURINV_NO
+			,	SUR_NO
+			,	SURQUE_NO
+			,	SURARC_NO
+			,	SURINV_FIRST
+			,	SURINV_SECOND
+			,	SURINV_THIRD
+			,	SURINV_FOUR
+			,	SURINV_FIVE
+			,	SURINV_ANSWER
+			,	SURINV_TYPE
+			,	SURINV_INSDAT
+		)VALUES(
+			SURINV_SEQ.nextval
+			,	#{surNo, jdbcType=NUMERIC}
+			,	#{surqueNo, jdbcType=NUMERIC}
+			,	#{surarcNo, jdbcType=NUMERIC}
+			,	#{surinvFirst, jdbcType=VARCHAR}	
+			,	#{surinvSecond, jdbcType=VARCHAR}	
+			,	#{surinvThird, jdbcType=VARCHAR}	
+			,	#{surinvFour, jdbcType=VARCHAR}	
+			,	#{surinvFive, jdbcType=VARCHAR}	
+			,	#{surinvAnswer, jdbcType=VARCHAR}
+			,	#{surinvType, jdbcType=VARCHAR}
+			,	SYSDATE
+		)
+	</insert>
+	
+	<select id="selectSurveyList" resultMap="surveyInvestigationMap">
+		SELECT * 
+		FROM SURVEY
+	</select>
+	
+	<select id="selectSurveyQuestionList" resultMap="surveyInvestigationMap">
+		SELECT * 
+		FROM SUR_QUE
+		WHERE SUR_NO = #{surNo}
+	</select>
+	
+	<select id="selectSurveyArticleList" resultMap="surveyInvestigationMap">
+		SELECT * 
+		FROM SUR_ARC
+		WHERE SURQUE_NO = #{surqueNo}
+	</select>
+	
+	<select id="selectSurveyDeadlineList" resultMap="surveyInvestigationMap" parameterType="PagingVO" >
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT 
+		        A.SURINV_NO
+		        , B.SUR_TITLE
+		        , TO_CHAR(B.SUR_SDATE, 'YYYY-MM-DD') SUR_SDATE
+		        , TO_CHAR(B.SUR_EDATE, 'YYYY-MM-DD') SUR_EDATE
+		        , C.EMP_NM 
+		        , A.SURINV_TYPE
+		        FROM SUR_INV A LEFT OUTER JOIN SURVEY B
+		        ON A.SUR_NO = B.SUR_NO
+		        LEFT OUTER JOIN EMPLOYEE C
+		        ON B.EMP_ID = C.EMP_ID
+				<include refid="searchDeadlineFrag"/>
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectSurveyProgressList" resultType="SurveyInvestigationVO" parameterType="PagingVO" >
+		SELECT *
+		FROM(
+			SELECT A.*, ROWNUM RNUM
+			FROM(
+				SELECT 
+		        A.SURINV_NO
+		        , B.SUR_TITLE
+		        , TO_CHAR(B.SUR_SDATE, 'YYYY-MM-DD') SUR_SDATE
+		        , TO_CHAR(B.SUR_EDATE, 'YYYY-MM-DD') SUR_EDATE
+		        , C.EMP_NM 
+		        , A.SURINV_TYPE
+		        FROM SUR_INV A LEFT OUTER JOIN SURVEY B
+		        ON A.SUR_NO = B.SUR_NO
+		        LEFT OUTER JOIN EMPLOYEE C
+		        ON B.EMP_ID = C.EMP_ID
+		        <include refid="searchProgressFrag"/>
+			)A
+		)B
+		<![CDATA[
+		WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<update id="updateSurveyInvestigation" parameterType="SurveyInvestigationVO">
+		UPDATE SUR_INV
+		SET
+				SURINV_TYPE = #{surinvType, jdbcType=VARCHAR}
+			,	SURINV_FIRST = #{surinvFirst, jdbcType=VARCHAR}
+			,	SURINV_SECOND = #{surinvSecond, jdbcType=VARCHAR}
+			,	SURINV_THIRD = #{surinvThird, jdbcType=VARCHAR}
+			,	SURINV_FOUR = #{surinvFour, jdbcType=VARCHAR}
+			,	SURINV_FIVE = #{surinvFive, jdbcType=VARCHAR}
+			,	SURINV_ANSWER = #{surinvAnswer, jdbcType=VARCHAR}
+		WHERE SURINV_NO = #{surinvNo}	
+	</update>
+	
+	<delete id="deleteSurveyInvestigation" parameterType="SurveyInvestigationVO">
+		DELETE FROM SUR_INV
+        WHERE SURINV_NO = #{surinvNo}
+	</delete>
+	
+	
+</mapper>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

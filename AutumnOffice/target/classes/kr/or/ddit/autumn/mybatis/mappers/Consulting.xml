@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.web.consulting.dao.ConsultingDAO">
+	<resultMap type="ConsultingVO" id="consultingMap" autoMapping="true">
+		<id property="comCode" column="COM_CODE"/>
+	</resultMap>
+	<insert id="insertConsulting" parameterType="ConsultingVO">
+		INSERT INTO COMPANY(
+			COM_CODE
+			,	COM_ID
+			,	COM_PASS
+			,	COM_NM
+			,	COM_PH
+			,	COM_MAIL
+			,	COM_CNM
+			,	COM_CEO
+			,	COM_TEL
+			,	COM_CORPORATE
+			,	COM_DOMAIN
+			,	COM_ADDR
+		)VALUES(
+				#{comCode}
+			 ,	#{comId}
+			 ,	#{comPass}
+			 ,	#{comNm}
+			 ,	#{comPh}
+			 ,	#{comMail}
+			 ,	#{comCnm}
+			 ,	#{comCeo}
+			 ,	#{comTel}
+			 ,	#{comCorporate}
+			 ,	#{comDomain}
+			 ,	#{comAddr}
+		)
+	</insert>
+	
+	<select id="comCodeCheck" parameterType="String" resultType="int">
+		<![CDATA[
+		SELECT COUNT(*) FROM COMPANY WHERE COM_CODE = #{comCode}
+		]]>
+	</select>
+	
+	<select id="idCheck" parameterType="String" resultType="int">
+		<![CDATA[
+		SELECT COUNT(*) FROM COMPANY WHERE COM_ID = #{comId}
+		]]>
+	</select>
+
+</mapper>

@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.resource.dao.ResourceDAO">
+
+
+	<resultMap type="kr.or.ddit.autumn.groupware.resource.vo.ReservVO" id="meetReserMap"  autoMapping="true">
+		<id property="revNo" column="REV_NO"/>
+		<collection property="meetRoom" ofType="MeetRoomVO" autoMapping="true"> 
+		 	<id property="meetNo" column="MEET_NO"/> 
+		 </collection> 
+	</resultMap>
+	
+	<select id="selectMyResourceList" parameterType="kr.or.ddit.autumn.groupware.resource.vo.ResourcePagingVO" resultMap="meetReserMap">
+		SELECT *
+			FROM (
+				SELECT A.*, ROWNUM RNUM
+				FROM(
+					SELECT M.REV_NO,M.REV_START, T.MET_CON, M.MEET_NM, M.REV_STA
+					FROM 
+					(
+					    SELECT B.REV_NO, B.REV_START, A.MEET_NM, B.REV_STA, B.MET_TIME
+					    FROM MEET_ROOM A LEFT OUTER JOIN MEET_RESER B
+					    ON A.MEET_NO = B.MEET_NO
+					    WHERE B.EMP_ID = #{empId}
+					) M LEFT OUTER JOIN MEET_TIME T
+					ON M.MET_TIME = T.MET_TIME
+					ORDER BY M.REV_START DESC, M.MET_TIME
+				) A
+			) B
+			<![CDATA[
+			WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+		
+	</select>
+	
+	<select id="selectMyList" parameterType="String" resultMap="meetReserMap">
+		SELECT M.REV_NO,M.REV_START, T.MET_CON, M.MEET_NM, M.REV_STA
+		FROM 
+		(
+		    SELECT B.REV_NO, B.REV_START, A.MEET_NM, B.REV_STA, B.MET_TIME
+		    FROM MEET_ROOM A LEFT OUTER JOIN MEET_RESER B
+		    ON A.MEET_NO = B.MEET_NO
+		    WHERE B.EMP_ID = #{empId}
+		) M LEFT OUTER JOIN MEET_TIME T
+		ON M.MET_TIME = T.MET_TIME
+	</select>
+
+	<select id="selectAllResourceList" parameterType="kr.or.ddit.autumn.groupware.resource.vo.ResourcePagingVO" resultType="kr.or.ddit.autumn.groupware.resource.vo.RoomVO">
+		SELECT *
+			FROM (
+				SELECT A.*, ROWNUM RNUM
+				FROM(
+						SELECT A.MEET_NM MEET_NM, A.MEET_NO MEET_NO, 
+				    (
+				        SELECT COUNT(*) 
+				        FROM MEET_ROOM C LEFT OUTER JOIN MEET_RESER D 
+				        ON C.MEET_NO = D.MEET_NO 
+				        WHERE REV_START BETWEEN TRUNC(SYSDATE, 'iw')  AND TRUNC(SYSDATE, 'iw')+6 AND A.MEET_NO = C.MEET_NO
+				    ) MEET_COUNT 
+				FROM MEET_ROOM A LEFT OUTER JOIN MEET_RESER B
+				ON A.MEET_NO = B.MEET_NO
+				WHERE A.COM_CODE = #{comCode}
+				
+				GROUP BY A.MEET_NM, A.COM_CODE, A.MEET_NO
+				) A
+			) B
+			<![CDATA[
+			WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+		]]>
+	</select>
+	
+	<select id="selectCompanyAllResourceList" parameterType="String" resultType="kr.or.ddit.autumn.groupware.resource.vo.RoomVO">
+		SELECT A.MEET_NM MEET_NM, A.MEET_NO MEET_NO, 
+		    (
+		        SELECT COUNT(*) 
+		        FROM MEET_ROOM C LEFT OUTER JOIN MEET_RESER D 
+		        ON C.MEET_NO = D.MEET_NO 
+		        WHERE REV_START BETWEEN TRUNC(SYSDATE, 'iw')  AND TRUNC(SYSDATE, 'iw')+6 AND A.MEET_NO = C.MEET_NO
+		    ) MEET_COUNT 
+		FROM MEET_ROOM A LEFT OUTER JOIN MEET_RESER B
+		ON A.MEET_NO = B.MEET_NO
+		WHERE A.COM_CODE = #{comCode}
+		
+		GROUP BY A.MEET_NM, A.COM_CODE, A.MEET_NO
+	</select>
+	
+	<select id="selectResourceTotalCount" parameterType="kr.or.ddit.autumn.groupware.resource.vo.ResourcePagingVO" resultType="int">
+		SELECT COUNT(*)
+		<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(comCode)" >
+		FROM MEET_ROOM
+		WHERE COM_CODE = #{comCode}
+		</if>
+		<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(empId)">
+		FROM MEET_RESER
+		WHERE EMP_ID = #{empId}
+		</if>
+	</select>
+	
+	<select id="selectResourceView" parameterType="int" resultType="kr.or.ddit.autumn.groupware.resource.vo.ResourceInfoVO">
+		SELECT A.MEET_NO, B.MEET_NM, A.MEI_PER, A.MEI_BEAM, A.MEI_BOD, A.MEI_PLA, A.MEI_ITEM, A.MEI_SCR
+		FROM  MEET_INFO A INNER JOIN MEET_ROOM B
+		ON A.MEET_NO = B.MEET_NO
+		WHERE A.MEET_NO = #{meetNo}
+	</select>
+	
+	<select id="selectTimeList" resultType="MeetTimeVO">
+		SELECT MET_TIME, MET_CON
+		FROM MEET_TIME
+	</select>
+	
+	<insert id="insertResourceReserv" parameterType="MeetReserVO">
+		INSERT INTO MEET_RESER (
+		     REV_NO
+		    ,EMP_ID
+		    ,MEET_NO
+		    ,REV_START
+		    ,REV_CON
+		    ,REV_STA
+		    ,MET_TIME
+		) VALUES (
+		     MEET_RESERV_SEQ.NEXTVAL
+		    ,#{empId}
+		    ,#{meetNo}
+		    ,#{revStart}
+		    ,#{revCon}
+		    ,0
+		    ,#{metTime}
+		)
+	</insert>
+	
+	<select id="selectCompareList" parameterType="MeetReserVO" resultType="Integer">
+		SELECT COUNT(*)
+		FROM MEET_RESER
+		WHERE MEET_NO = #{meetNo}
+		AND REV_START = #{revStart}
+		AND MET_TIME = #{metTime}
+	</select>
+	
+	<select id="selectRoomList" parameterType="kr.or.ddit.autumn.groupware.resource.vo.ReservVO" resultType="kr.or.ddit.autumn.groupware.resource.vo.ReservVO">
+		SELECT A.MEET_NO MEET_NO, B.EMP_NM EMP_NM, A.REV_START REV_START, T.MET_CON MET_CON
+        FROM MEET_RESER A LEFT OUTER JOIN EMPLOYEE B
+        ON A.EMP_ID = B.EMP_ID
+        LEFT OUTER JOIN MEET_TIME T
+        ON A.MET_TIME = T.MET_TIME
+        WHERE A.MEET_NO =#{meetNo}
+        AND A.REV_START BETWEEN #{startDay} AND #{endDay} 
+	</select>
+	
+	<delete id="deleteMyResource" parameterType="int">
+		DELETE 
+		FROM MEET_RESER
+		WHERE REV_NO = #{revNo}
+	</delete>
+	
+	<select id="selectReservTableList"  resultType="kr.or.ddit.autumn.groupware.resource.vo.ReservVO" parameterType="int">
+		WITH DAYSCOPE AS(
+		    SELECT TO_CHAR(SYSDATE - TO_CHAR(SYSDATE, 'D')+ROWNUM+1, 'YYYY-MM-DD') DAY_VAL
+		    FROM DUAL
+		    CONNECT BY LEVEL <![CDATA[ < ]]> 6
+		), DAYTIMESCOPE AS (
+		    SELECT DAY_VAL, MET_TIME TIME_VAL, MET_CON TIME_TXT
+		    FROM DAYSCOPE, MEET_TIME
+		), MEET_RESER_NM AS (
+		SELECT MR.*, E.EMP_NM
+		FROM MEET_RESER MR INNER JOIN EMPLOYEE E
+		        ON (MR.EMP_ID = E.EMP_ID)
+		), ROOMRSVR AS (
+		    SELECT REV_NO, A.MEET_NO, MEET_NM, B.EMP_ID, B.EMP_NM, REV_CON,MET_TIME, TO_CHAR(REV_START) REV_START
+		    FROM MEET_ROOM A LEFT OUTER JOIN  MEET_RESER_NM B
+		        ON (A.MEET_NO = B.MEET_NO)
+		        WHERE B.MEET_NO = #{meetNo}
+		), ROOMRSVRVIEW AS(
+		SELECT DISTINCT REV_CON, DAY_VAL, TIME_VAL, TIME_TXT, MEET_NO||'['||EMP_NM||']' RSV_NM
+		FROM DAYTIMESCOPE LEFT OUTER JOIN ROOMRSVR
+		        ON (DAY_VAL = REV_START AND TIME_VAL = MET_TIME)
+		)SELECT DAY_VAL, TIME_TXT, REV_CON
+		    , LISTAGG (RSV_NM, ', ') WITHIN GROUP(ORDER BY RSV_NM) 
+		        RSV_NMS
+		FROM ROOMRSVRVIEW
+		GROUP BY DAY_VAL, TIME_TXT, REV_CON
+		ORDER BY TIME_TXT
+	</select>
+	
+
+	<update id="updateResourceStatus">
+		UPDATE MEET_RESER
+		SET REV_STA = 1
+		WHERE
+		REV_NO  IN (
+		SELECT REV_NO 
+		FROM MEET_RESER A LEFT OUTER JOIN MEET_TIME B
+		ON A.MET_TIME = B.MET_TIME
+		WHERE (A.REV_START BETWEEN '2000-01-01' AND SYSDATE-1)
+		UNION 
+		SELECT REV_NO
+		FROM MEET_RESER A LEFT OUTER JOIN MEET_TIME B
+		ON A.MET_TIME = B.MET_TIME
+		WHERE A.REV_START = TO_CHAR(SYSDATE,'YYYY-MM-DD') AND A.MET_TIME <![CDATA[ <= ]]>
+		 (
+		  CASE TO_CHAR(SYSDATE,'HH24') 
+		  			WHEN '00' THEN '0'
+		  			WHEN '01' THEN '0'
+		  			WHEN '02' THEN '0'
+		  			WHEN '03' THEN '0'
+		  			WHEN '04' THEN '0'
+		  			WHEN '05' THEN '0'
+		  			WHEN '06' THEN '0'
+		  			WHEN '07' THEN '0'
+		  			WHEN '08' THEN '0'
+		            WHEN '09' THEN '1'
+		            WHEN '10' THEN '2'
+		            WHEN '11' THEN '3'
+		            WHEN '12' THEN '4'
+		            WHEN '13' THEN '5'
+		            WHEN '14' THEN '6'
+		            WHEN '15' THEN '7'
+		            WHEN '16' THEN '8'
+		            WHEN '17' THEN '9'
+		            ELSE '10'
+		       END
+		 )
+		)
+	</update>	
+	
+	<select id="selectResourceImage" parameterType="int" resultType="kr.or.ddit.autumn.vo.AttatchVO">
+		SELECT * 
+		FROM ATTATCH
+		WHERE MEET_NO = #{meetNo}
+	</select>
+</mapper>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.management.menu.dao.AttendanceManageDAO">
+	
+	<insert id="insertAttendanceManage" parameterType="EmpTimeVO">
+		INSERT INTO EMP_TIME
+		VALUES( EMP_TIME_SEQ.NEXTVAL , #{comCode}, #{emtOnt} ,#{emtOft} )
+	
+	</insert>
+	
+	
+	<update id="updateAtttendanceManage" parameterType="EmpTimeVO">
+		UPDATE EMP_TIME
+		SET EMT_ONT = #{emtOnt}, EMT_OFT = #{emtOft}
+		WHERE COM_CODE = #{comCode}
+	</update>
+	
+	<select id="selectAttendanceManage" parameterType="String" resultType="int">
+	    SELECT COUNT(*)
+	    FROM EMP_TIME
+	    WHERE COM_CODE = #{comCode}
+	</select>
+	
+	<select id="selectAttendaceManageList" parameterType="String" resultType="EmpTimeVO">
+		SELECT *
+		FROM EMP_TIME
+		WHERE COM_CODE = #{comCode}
+	</select>
+	
+	<!-- 연차 -->
+	
+	<select id="selectEmployee" parameterType="String" resultType="EmployeeVO">
+		SELECT *
+		FROM EMPLOYEE
+		WHERE COM_CODE = #{comCode}
+	</select>
+	
+	<select id="selectVacationList" parameterType="String" resultType="AulLeaveVO">
+		SELECT A.EMP_ID , AUL_COT, AUL_LOT, COM_CODE
+		FROM AUL_LEAVE A LEFT OUTER JOIN EMPLOYEE B
+		ON A.EMP_ID = B.EMP_ID
+		WHERE COM_CODE = #{comCode}
+	</select>
+	
+	<insert id="insertVacation" parameterType="String">
+		INSERT INTO AUL_LEAVE
+		VALUES( AUL_LEAVE_SEQ.NEXTVAL, #{empId}, 12, 12, 0)
+	</insert>
+	
+	<update id="updateVacation" parameterType="String">
+	<![CDATA[ 
+		UPDATE AUL_LEAVE C
+		SET AUL_COT = 
+		(
+		SELECT CASE WHEN (SYSDATE - EMP_HID)/365 < 1 THEN '12'
+		            WHEN (SYSDATE - EMP_HID)/365 >=1 AND (SYSDATE - EMP_HID)/365 <2 THEN '13'
+		            WHEN (SYSDATE - EMP_HID)/365 >=2 AND (SYSDATE - EMP_HID)/365 <3 THEN '14'
+		            WHEN (SYSDATE - EMP_HID)/365 >=3 AND (SYSDATE - EMP_HID)/365 <4 THEN '15'
+		            WHEN (SYSDATE - EMP_HID)/365 >=4 AND (SYSDATE - EMP_HID)/365 <5 THEN '16'
+		            WHEN (SYSDATE - EMP_HID)/365 >=5 AND (SYSDATE - EMP_HID)/365 <6 THEN '17'
+		            WHEN (SYSDATE - EMP_HID)/365 >=6 AND (SYSDATE - EMP_HID)/365 <7 THEN '18'
+		            WHEN (SYSDATE - EMP_HID)/365 >=7 AND (SYSDATE - EMP_HID)/365 <8 THEN '19'
+		            WHEN (SYSDATE - EMP_HID)/365 >=8 AND (SYSDATE - EMP_HID)/365 <9 THEN '20'
+		            WHEN (SYSDATE - EMP_HID)/365 >=9 AND (SYSDATE - EMP_HID)/365 <10 THEN '21'
+		            WHEN (SYSDATE - EMP_HID)/365 >=10 THEN '22'
+		            END AS COUNTDAY
+		FROM AUL_LEAVE A LEFT OUTER JOIN EMPLOYEE B
+		ON A.EMP_ID = B.EMP_ID
+		WHERE C.EMP_ID = A.EMP_ID
+		AND A.EMP_ID = #{empId}
+		)
+		WHERE EMP_ID = #{empId}
+	 ]]>
+	</update>
+</mapper>

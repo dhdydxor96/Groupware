@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper
+	namespace="kr.or.ddit.autumn.groupware.attendance.dao.DepAnnualHistoryDAO">
+	
+	
+	<sql id="searchFrag">
+			<trim prefix="AND"  > <!-- 조건을 만족하면 사용 (처음에 열어줬다가 마지막에 닫아줌) / 아니면 사용x --> <!-- <where> -->
+				<if test="'ROLE_HEAD' eq powRole" >
+					C.DEP_ID = #{depId}
+				</if>
+			</trim>
+				<if test="@org.apache.commons.lang3.StringUtils@isNotBlank(simpleCondition.searchWord)">
+					<choose>
+						<when test="'job' eq simpleCondition.searchType">
+							AND INSTR(JOB_NM, #{simpleCondition.searchWord}) > 0
+						</when>
+						<when test="'dept' eq simpleCondition.searchType">
+							AND INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0
+						</when>
+						<when test="'writer' eq simpleCondition.searchType">
+							AND INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+						</when>
+						<when test="'year' eq simpleCondition.searchType">
+							AND(
+							TO_CHAR(LER_START,'YYYY') = #{simpleCondition.searchWord}
+							OR 
+							TO_CHAR(LER_END,'YYYY') = #{simpleCondition.searchWord}
+							)
+						</when>
+						<otherwise>
+							AND(
+							INSTR(JOB_NM, #{simpleCondition.searchWord}) > 0
+							OR
+							INSTR(EMP_NM, #{simpleCondition.searchWord}) > 0
+							OR
+							INSTR(DEP_NM, #{simpleCondition.searchWord}) > 0
+							OR
+							TO_CHAR(LER_START,'YYYY') = #{simpleCondition.searchWord}
+							OR 
+							TO_CHAR(LER_END,'YYYY') = #{simpleCondition.searchWord}
+							)
+						</otherwise>
+					</choose>
+				</if>
+		</sql>	
+	
+	<resultMap type="LveRecodeVO" id="depAnnualHistoryMap" autoMapping="true">
+		<id property="lerCode" column="LER_CODE"/>
+	
+		<association property="employee" javaType="kr.or.ddit.autumn.vo.EmployeeVO" autoMapping="true">
+			<id property="empId" column="EMP_ID"/>
+		</association>
+		<association property="department" javaType="kr.or.ddit.autumn.vo.DepartmentVO" autoMapping="true">
+			<id property="depId" column="DEP_ID"/>
+		</association>
+		<association property="job" javaType="kr.or.ddit.autumn.vo.JobVO" autoMapping="true">
+			<id property="jobId" column="JOB_ID"/>
+		</association>
+		<association property="elecApp">
+			<id property="eleNo" column="ELE_NO"/>
+		</association>
+	</resultMap>
+	
+	<select id="depAnnualHistoryList" parameterType="kr.or.ddit.autumn.groupware.attendance.vo.AttendEmployeeVO" resultMap="depAnnualHistoryMap">
+		SELECT EMP_NM, DEP_NM, JOB_NM, TO_CHAR(LER_START,'YYYY-MM-DD') LER_START , TO_CHAR(LER_END,'YYYY-MM-DD') LER_END , ROUND(LER_END-LER_START+1) LER_USE
+		FROM LVE_RECODE A LEFT OUTER JOIN AUL_LEAVE B
+		ON A.AUL_NO = B.AUL_NO
+		LEFT OUTER JOIN EMPLOYEE C
+		ON B.EMP_ID = C.EMP_ID
+		LEFT OUTER JOIN DEPARTMENT D
+		ON C.DEP_ID = D.DEP_ID 
+		LEFT OUTER JOIN JOB E
+		ON C.JOB_ID = E.JOB_ID
+		WHERE C.COM_CODE = #{comCode}
+		<if test="'ROLE_HEAD' eq powRole">
+		AND C.DEP_ID = #{depId}
+		</if>
+	             AND (
+	              	   TO_CHAR(LER_START, 'YYYY-MM-DD') = TO_CHAR(SYSDATE,'YYYY-MM-DD')
+	                 OR TO_CHAR(LER_END, 'YYYY-MM-DD') = TO_CHAR(SYSDATE,'YYYY-MM-DD')
+	             )
+	             ORDER BY LER_START DESC
+	</select>	
+	
+	<select id="depAnnualHistoryAllList" parameterType="DepartmentVO" resultMap="depAnnualHistoryMap">
+		SELECT 
+			EMP.EMP_ID
+	        ,EMP.EMP_NM
+	        ,DEP.DEP_ID
+	        ,DEP.DEP_NM
+	        ,JO.JOB_ID
+	        ,JO.JOB_NM
+	        ,ELE.ELE_NO
+	        ,LEV.LER_START
+	        ,LEV.LER_END
+		FROM
+		    EMPLOYEE EMP LEFT OUTER JOIN DEPARTMENT DEP ON(EMP.DEP_ID = DEP.DEP_ID)
+		                 LEFT OUTER JOIN JOB JO ON(EMP.JOB_ID = JO.JOB_ID)
+		                 LEFT OUTER JOIN ELEC_APP ELE ON(ELE.EMP_ID = EMP.EMP_ID)
+		                 INNER JOIN LVE_RECODE LEV ON(LEV.ELE_NO = ELE.ELE_NO)
+		                 WHERE EMP.COM_CODE = #{comCode} 
+	</select>
+	
+	<select id="historyRecode" parameterType="PagingVO" resultType="int">
+		SELECT COUNT(*)
+		FROM
+		(
+						SELECT EMP_NM, DEP_NM, JOB_NM, LER_START, LER_END, ROUND(LER_END-LER_START+1) LER_USE
+						FROM LVE_RECODE A LEFT OUTER JOIN AUL_LEAVE B
+						ON A.AUL_NO = B.AUL_NO
+						LEFT OUTER JOIN EMPLOYEE C
+						ON B.EMP_ID = C.EMP_ID
+						LEFT OUTER JOIN DEPARTMENT D
+						ON C.DEP_ID = D.DEP_ID 
+						LEFT OUTER JOIN JOB E
+						ON C.JOB_ID = E.JOB_ID
+						WHERE C.COM_CODE = #{comCode}
+					    AND EMP_END IS NULL
+					    <include refid="searchFrag"/>
+		)
+	</select>	
+	
+	<select id="historyRecodeList" parameterType="PagingVO" resultMap="depAnnualHistoryMap">
+		SELECT *
+			FROM(
+				SELECT A.*, ROWNUM RNUM
+				FROM(
+					SELECT EMP_NM, DEP_NM, JOB_NM, TO_CHAR(LER_START,'YYYY-MM-DD') LER_START , TO_CHAR(LER_END,'YYYY-MM-DD') LER_END , ROUND(LER_END-LER_START+1) LER_USE
+					FROM LVE_RECODE A LEFT OUTER JOIN AUL_LEAVE B
+					ON A.AUL_NO = B.AUL_NO
+					LEFT OUTER JOIN EMPLOYEE C
+					ON B.EMP_ID = C.EMP_ID
+					LEFT OUTER JOIN DEPARTMENT D
+					ON C.DEP_ID = D.DEP_ID 
+					LEFT OUTER JOIN JOB E
+					ON C.JOB_ID = E.JOB_ID
+					WHERE C.COM_CODE = #{comCode}
+					AND EMP_END IS NULL
+	                <include refid="searchFrag"/>
+	                ORDER BY LER_START DESC
+				)A
+			)B
+			<![CDATA[
+			WHERE RNUM >= #{startRow} AND RNUM <= #{endRow}
+			]]>
+	</select>
+</mapper>

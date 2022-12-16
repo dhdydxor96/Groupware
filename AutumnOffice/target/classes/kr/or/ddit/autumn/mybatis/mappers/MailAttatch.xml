@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="kr.or.ddit.autumn.groupware.mail.dao.MailAttatchDAO">
+	<insert id="insertAttatches" parameterType="SendMailVO">
+		<selectKey resultType="int" keyProperty="startNo" order="BEFORE">
+			SELECT NVL(MAX(ATT_NO), 0)+1
+			FROM ATTATCH
+		</selectKey>
+		INSERT ALL
+		
+		<foreach collection="attatchList" item="attatch" index="idx">
+		
+			INTO ATTATCH 
+			(
+				ATT_NO
+				, MAIL_NO
+				, ATT_FNM
+				, ATT_SNM
+				, ATT_MIME
+				, ATT_FIS
+				, ATT_FAS
+			) 
+			VALUES 
+			(
+				#{startNo}+#{idx}
+				, #{mailNo,jdbcType=NUMERIC}
+				, #{attatch.attFnm,jdbcType=VARCHAR}
+				, #{attatch.attSnm,jdbcType=VARCHAR}
+				, #{attatch.attMime,jdbcType=VARCHAR}
+				, #{attatch.attFis,jdbcType=NUMERIC}
+				, #{attatch.attFas,jdbcType=VARCHAR}
+			)
+		
+		</foreach>
+		
+		SELECT * FROM DUAL
+	</insert>
+	
+	<delete id="deleteAttatches" parameterType="int">
+		DELETE FROM ATTATCH
+		WHERE MAIL_NO = #{mailNo}
+	</delete>
+	
+
+	
+	<select id="selectAttatch" parameterType="int" resultType="AttatchVO">
+		SELECT 
+		ATT_FNM, ATT_SNM
+		, ATT_FIS, ATT_MIME
+		FROM ATTATCH
+		WHERE ATT_NO = #{attNo}
+				
+	</select>
+
+</mapper>
